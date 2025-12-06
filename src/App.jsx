@@ -21,9 +21,9 @@ const EXPERTISE_AREAS = [
 ];
 
 const BLOG_POSTS = [
-  { id: 1, title: "The Human Element in Digital Transformation", date: "Oct 24, 2024", excerpt: "Why technology is only 20% of the challenge when upgrading legacy systems." },
-  { id: 2, title: "Navigating the Edge: Security Implications", date: "Sep 15, 2024", excerpt: "How edge computing is redefining the perimeter and what CISOs need to know." },
-  { id: 3, title: "Leadership in the Age of AI", date: "Aug 02, 2024", excerpt: "Adapting management styles when your team is augmented by intelligent agents." }
+  { id: 1, title: "The Human Element in Digital Transformation", date: "Oct 24, 2025", excerpt: "Why technology is only 20% of the challenge when upgrading legacy systems." },
+  { id: 2, title: "Navigating the Edge: Security Implications", date: "Sep 15, 2025", excerpt: "How edge computing is redefining the perimeter and what CISOs need to know." },
+  { id: 3, title: "Leadership in the Age of AI", date: "Aug 02, 2025", excerpt: "Adapting management styles when your team is augmented by intelligent agents." }
 ];
 
 const NAV_LINKS = ["Home", "Projects", "Services", "Blog", "Contact"];
@@ -131,8 +131,8 @@ const App = () => {
               <p className="text-neutral-400 text-lg leading-relaxed mb-6">I am a technology executive with over 15 years of experience leading digital transformation and building high-performance engineering cultures in the Boston area.</p>
               <p className="text-neutral-500 text-base leading-relaxed mb-8 italic border-l-2 border-neutral-800 pl-4">When I'm not designing technical strategy, I'm navigating the chaos of raising twins, Malcolm and Carter, with my wife Betsy—the ultimate lesson in crisis management and negotiation.</p>
               <div className="flex gap-6">
-                <a href="#" className="flex items-center gap-2 text-white hover:text-rose-500 transition-colors font-bold"><Linkedin size={20} /> LinkedIn</a>
-                <a href="#" className="flex items-center gap-2 text-white hover:text-rose-500 transition-colors font-bold"><Globe size={20} /> Github</a>
+                <a href="https://www.linkedin.com/in/raphaeljedwards/" className="flex items-center gap-2 text-white hover:text-rose-500 transition-colors font-bold"><Linkedin size={20} /> LinkedIn</a>
+                <a href="https://github.com/raphaeledwards" className="flex items-center gap-2 text-white hover:text-rose-500 transition-colors font-bold"><Globe size={20} /> Github</a>
               </div>
             </div>
              <div className="relative order-1 md:order-2">
@@ -224,8 +224,8 @@ const App = () => {
               <h2 className="text-3xl md:text-5xl font-bold mb-6">Let's Solve Something Hard.</h2>
               <p className="text-neutral-400 mb-10 max-w-lg mx-auto">Available for speaking engagements, advisory board roles, and strategic consulting.</p>
               <div className="flex flex-col md:flex-row justify-center gap-6">
-                <a href="mailto:raphael@raphaeljedwards.com" className="flex items-center justify-center gap-3 bg-rose-600 text-white px-8 py-4 rounded-md font-bold hover:bg-rose-700 transition-colors"><Mail size={20} /> raphael@raphaeljedwards.com</a>
-                <a href="#" className="flex items-center justify-center gap-3 bg-neutral-800 text-white px-8 py-4 rounded-md font-bold hover:bg-neutral-700 transition-colors border border-neutral-700"><Linkedin size={20} /> Connect on LinkedIn</a>
+                <a href="mailto:raphaeledwards@gmail.com" className="flex items-center justify-center gap-3 bg-rose-600 text-white px-8 py-4 rounded-md font-bold hover:bg-rose-700 transition-colors"><Mail size={20} /> Email Me!</a>
+                <a href="https://www.linkedin.com/in/raphaeljedwards/" className="flex items-center justify-center gap-3 bg-neutral-800 text-white px-8 py-4 rounded-md font-bold hover:bg-neutral-700 transition-colors border border-neutral-700"><Linkedin size={20} /> Connect on LinkedIn</a>
               </div>
             </div>
           </div>
