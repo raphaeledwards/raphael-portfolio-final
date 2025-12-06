@@ -127,9 +127,9 @@ const App = () => {
         <div className="container mx-auto px-6">
           <div className="grid md:grid-cols-2 gap-16 items-center">
             <div className="relative order-2 md:order-1">
-              <h2 className="text-3xl md:text-5xl font-bold mb-6">Director. Leader.<br/>Problem Solver.</h2>
-              <p className="text-neutral-400 text-lg leading-relaxed mb-6">I am a technology executive with over 15 years of experience leading digital transformation and building high-performance engineering cultures in the Boston area.</p>
-              <p className="text-neutral-500 text-base leading-relaxed mb-8 italic border-l-2 border-neutral-800 pl-4">When I'm not designing technical strategy, I'm navigating the chaos of raising twins, Malcolm and Carter, with my wife Betsy—the ultimate lesson in crisis management and negotiation.</p>
+              <h2 className="text-3xl md:text-5xl font-bold mb-6">Architecting Scalable<br/>Digital Success</h2>
+              <p className="text-neutral-400 text-lg leading-relaxed mb-6">A technology executive with a "builder" mindset. I don't just manage complexity; I architect the strategic programs that scale global success. From web security to enterprise growth, I lead the high-performance teams that deliver measurable business value.</p>
+              <p className="text-neutral-500 text-base leading-relaxed mb-8 italic border-l-2 border-neutral-800 pl-4">Proven by a track record of architecting strategic programs that turn small investments into multi-million dollar recurring revenue loops.</p>
               <div className="flex gap-6">
                 <a href="https://www.linkedin.com/in/raphaeljedwards/" className="flex items-center gap-2 text-white hover:text-rose-500 transition-colors font-bold"><Linkedin size={20} /> LinkedIn</a>
                 <a href="https://github.com/raphaeledwards" className="flex items-center gap-2 text-white hover:text-rose-500 transition-colors font-bold"><Globe size={20} /> Github</a>
