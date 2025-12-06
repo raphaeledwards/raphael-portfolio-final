@@ -31,6 +31,9 @@ const App = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
+  // FIX: This line defines the categories variable to prevent the crash
+  const categories = ["All", ...new Set(PROJECT_ITEMS.map(item => item.category))];
+  
   const filteredItems = activeCategory === "All" 
     ? PROJECT_ITEMS 
     : PROJECT_ITEMS.filter(item => item.category === activeCategory);
