@@ -25,22 +25,6 @@ import { getAuth, onAuthStateChanged, signOut, signInAnonymously, signInWithCust
 // [LOCAL USE]: Uncomment import
  import { auth } from './firebase'; 
 
-// [PREVIEW USE]:
-let localAuth = null;
-try { if (typeof auth !== 'undefined') localAuth = auth; } catch (e) {}
-let appAuth = localAuth;
-try {
-  if (typeof __firebase_config !== 'undefined') {
-    const firebaseConfig = JSON.parse(__firebase_config);
-    const app = initializeApp(firebaseConfig);
-    appAuth = getAuth(app);
-  } else if (!appAuth) {
-    console.warn("⚠️ Local Mode: Firebase Auth not initialized.");
-  }
-} catch (error) {
-  console.error("Firebase initialization warning:", error);
-}
-
 // 4. RESUME CONTEXT (THE BRAIN)
 // [LOCAL USE]: Uncomment this import to use the external file we just created!
  import { systemPrompt as externalSystemPrompt } from './data/resumeContext';
