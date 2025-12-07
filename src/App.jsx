@@ -47,7 +47,7 @@ try {
 }
 
 // NOTE: If you have a local firebase.js, un-comment the next line and comment out the block above
- import { auth } from './firebase'; 
+// import { auth } from './firebase'; 
 
 
 // --- DATA ---
