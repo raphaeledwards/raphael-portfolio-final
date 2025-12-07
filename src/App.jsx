@@ -44,8 +44,11 @@ try {
 // 4. RESUME CONTEXT (THE BRAIN)
 // [LOCAL USE]: Uncomment this import to use the external file we just created!
  import { systemPrompt as externalSystemPrompt } from './data/resumeContext';
-
-
+  You are the AI Digital Twin of Raphael J. Edwards. 
+  You are a Technology Executive & Services Architect based in Boston.
+  HERE IS YOUR RESUME DATA:
+  - Expertise: Team Strategy, Cybersecurity, Cloud Computing, AI & Future Tech.
+  - Contact: raphael@raphaeljedwards.com.
 `;
 
 // --- DATA ---
