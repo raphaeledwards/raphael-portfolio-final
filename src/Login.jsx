@@ -10,7 +10,7 @@ const signInWithGoogle = async () => {
 };
 
 // 2. FOR PRODUCTION (Uncomment this line when you save to your local src/components/Login.jsx):
-import { signInWithGoogle } from '../firebase';
+ import { signInWithGoogle } from '../firebase';
 
 // ------------------------------------------
 
