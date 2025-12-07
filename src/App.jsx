@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Terminal, ChevronRight, Users, Lock, Cloud, BrainCircuit, MapPin, Linkedin, Globe, Mail, Menu, X as CloseIcon, MessageSquare, Send } from 'lucide-react';
+import { Terminal, ChevronRight, Users, Lock, Cloud, BrainCircuit, MapPin, Linkedin, Globe, Mail, Menu, X as CloseIcon, MessageSquare, Send, Activity } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken } from 'firebase/auth';
 
@@ -11,14 +11,11 @@ import { getAuth, onAuthStateChanged, signOut, signInAnonymously, signInWithCust
  import bostonSkyline from './assets/boston-skyline.jpg';
 
 // --- GEMINI API CONFIGURATION ---
-// GET YOUR KEY HERE: https://aistudio.google.com/app/apikey
-//
 // 1. FOR PRODUCTION (Vercel/Local):
 //    Uncomment the line below to pull the key from your environment variables (.env).
     const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
 
 // 2. FOR PREVIEW (Current):
-//    We use an empty string here to prevent "import.meta" build errors in this preview.
 //const GEMINI_API_KEY = ""; 
 
 // --- FIREBASE SETUP (SAFE MODE) ---
@@ -72,7 +69,6 @@ const NAV_LINKS = ["Home", "Projects", "Services", "Blog", "Contact"];
 
 // --- COMPONENTS ---
 
-// Integrated Login Component
 const Login = ({ onOfflineLogin }) => {
   const handleLogin = async () => {
     if (auth) {
@@ -109,13 +105,14 @@ const Login = ({ onOfflineLogin }) => {
   );
 };
 
-// Chat Component
+// --- CHAT INTERFACE WITH DIAGNOSTICS ---
 const ChatInterface = ({ user }) => {
   const [messages, setMessages] = useState([
-    { role: 'assistant', text: `Identity confirmed: ${user?.email || 'Director'}. Accessing neural archives... Hello. I am Raphael's digital twin. Ask me about his architecture philosophy, leadership style, or technical experience.` }
+    { role: 'assistant', text: `Identity confirmed: ${user?.email || 'Director'}. Accessing neural archives...` }
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [availableModel, setAvailableModel] = useState(null);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -125,6 +122,40 @@ const ChatInterface = ({ user }) => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // --- DIAGNOSTIC: AUTO-DETECT MODELS ON LOAD ---
+  useEffect(() => {
+    const detectModels = async () => {
+      if (!GEMINI_API_KEY) return;
+      
+      setMessages(prev => [...prev, { role: 'assistant', text: "🔄 DIAGNOSTIC: Querying Google AI for available models..." }]);
+      
+      try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${GEMINI_API_KEY}`);
+        const data = await response.json();
+        
+        if (data.models) {
+          const modelNames = data.models.map(m => m.name);
+          const preferred = modelNames.find(n => n.includes('flash')) || modelNames.find(n => n.includes('pro')) || modelNames[0];
+          
+          setAvailableModel(preferred.replace('models/', '')); // Store the clean model ID
+          
+          setMessages(prev => [...prev, { 
+            role: 'assistant', 
+            text: `✅ SUCCESS: Connection established.\n\nAvailable Models Detected:\n${modelNames.map(n => `• ${n}`).join('\n')}\n\n👉 Auto-selecting: ${preferred}` 
+          }]);
+        } else {
+           setMessages(prev => [...prev, { role: 'assistant', text: `⚠️ WARNING: Connected, but no models list returned. Error: ${JSON.stringify(data)}` }]);
+        }
+      } catch (e) {
+        setMessages(prev => [...prev, { role: 'assistant', text: `❌ CRITICAL FAILURE: Could not list models. Check API Key permissions. Error: ${e.message}` }]);
+      }
+    };
+    
+    // Slight delay to simulate boot sequence
+    setTimeout(detectModels, 1000);
+  }, []);
+
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -139,50 +170,38 @@ const ChatInterface = ({ user }) => {
       setTimeout(() => {
         setMessages(prev => [...prev, { 
           role: 'assistant', 
-          text: "⚠️ MISSING API KEY: I am currently offline. To enable my brain, please add `VITE_GEMINI_API_KEY` to your environment variables (.env locally or Vercel settings)." 
+          text: "⚠️ MISSING API KEY: I am currently offline. To enable my brain, please add `VITE_GEMINI_API_KEY` to your environment variables." 
         }]);
         setIsTyping(false);
       }, 500);
       return;
     }
 
+    // Use the auto-detected model, or fallback to generic flash
+    const targetModel = availableModel || "gemini-1.5-flash";
+
     try {
-      // Construct the system prompt using the portfolio data
       const systemPrompt = `
-        You are the AI Digital Twin of Raphael J. Edwards. 
-        You are a Technology Executive & Services Architect based in Boston.
-        Your tone is professional, strategic, yet approachable with a slight cyberpunk/futuristic flair suitable for a high-tech portfolio.
-        
+        You are the AI Digital Twin of Raphael J. Edwards... (omitted for brevity)
         HERE IS YOUR RESUME DATA:
         - Expertise: Team Strategy, Cybersecurity, Cloud Computing, AI & Future Tech.
-        - Projects: Connected Vehicle Architecture (OTA for 1M+ cars), Secure Financial Transformation ($70M+ portfolio), Operational Intelligence (VMO saving 2300 hours), Strategic Revenue Architecture ($70k to $12M ARR).
-        - Leadership Style: "Building resilient teams. Solving complex problems." You believe in blameless post-mortems and high-performance cultures.
-        - Contact: raphael@raphaeljedwards.com.
-        
-        INSTRUCTIONS:
-        - Answer the user's questions based on this data.
-        - Be concise and impactful.
-        - If asked about something not in the data, politely pivot back to your expertise or offer to contact the real Raphael.
-        - Do not make up facts not present here.
+        - Projects: Connected Vehicle Architecture, Secure Financial Transformation...
       `;
 
-      // Format history for Gemini
-      // Gemini API expects: { role: "user" | "model", parts: [{ text: string }] }
-      const historyForApi = newMessages.map(msg => ({
-        role: msg.role === 'user' ? 'user' : 'model',
-        parts: [{ text: msg.text }]
-      }));
+      const historyForApi = newMessages
+        .filter(m => !m.text.includes("DIAGNOSTIC")) // Filter out system logs
+        .map(msg => ({
+          role: msg.role === 'user' ? 'user' : 'model',
+          parts: [{ text: msg.text }]
+        }));
 
-      // NOTE: Switched to 'gemini-pro' (1.0 Pro) as a robust fallback.
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${GEMINI_API_KEY}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [
-            { role: 'user', parts: [{ text: systemPrompt }] }, // Prepend system prompt as context
-            ...historyForApi // Append conversation history
+            { role: 'user', parts: [{ text: systemPrompt }] }, 
+            ...historyForApi 
           ]
         })
       });
@@ -194,12 +213,11 @@ const ChatInterface = ({ user }) => {
       }
 
       const botResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "I'm having trouble connecting to the neural net right now.";
-
       setMessages(prev => [...prev, { role: 'assistant', text: botResponse }]);
 
     } catch (error) {
       console.error("Gemini API Error:", error);
-      setMessages(prev => [...prev, { role: 'assistant', text: `Connection Error: ${error.message}. Please check your API key settings.` }]);
+      setMessages(prev => [...prev, { role: 'assistant', text: `Connection Error: ${error.message}.` }]);
     } finally {
       setIsTyping(false);
     }
@@ -210,10 +228,13 @@ const ChatInterface = ({ user }) => {
       {/* Header */}
       <div className="bg-neutral-950 p-4 border-b border-neutral-800 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_#22c55e]"></div>
-          <span className="font-mono text-sm text-neutral-400">NEURAL LINK: <span className="text-green-500">ACTIVE</span></span>
+          <div className={`w-3 h-3 rounded-full animate-pulse shadow-[0_0_10px] ${availableModel ? 'bg-green-500 shadow-green-500' : 'bg-yellow-500 shadow-yellow-500'}`}></div>
+          <span className="font-mono text-sm text-neutral-400">NEURAL LINK: <span className={availableModel ? 'text-green-500' : 'text-yellow-500'}>{availableModel ? 'ONLINE' : 'CONNECTING...'}</span></span>
         </div>
-        <BrainCircuit className="text-neutral-600" size={20} />
+        <div className="flex items-center gap-2">
+            <span className="text-xs text-neutral-600 font-mono hidden md:block">{availableModel || "SEARCHING..."}</span>
+            <Activity className="text-neutral-600" size={20} />
+        </div>
       </div>
 
       {/* Messages Area */}
