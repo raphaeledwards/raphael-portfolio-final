@@ -6,49 +6,53 @@ import { getAuth, onAuthStateChanged, signOut, signInAnonymously, signInWithCust
 // --- CONFIGURATION ---
 
 // 1. ASSETS
-// [LOCAL USE]: Uncomment these imports and comment out the placeholder consts below
+// [LOCAL USE]: Uncomment imports, comment out consts
  import headshot from './assets/headshot.jpg';
  import bostonSkyline from './assets/boston-skyline.jpg';
 
-// [PREVIEW USE]: Keep these active for the preview to work. Comment them out locally.
+// [PREVIEW USE]:
 //const headshot = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?fit=crop&w=800&q=80";
 //const bostonSkyline = "https://images.unsplash.com/photo-1506191845112-c72635417cb3?fit=crop&w=1920&q=80";
 
-
 // 2. GEMINI API KEY
-// [LOCAL USE]: Uncomment the line below to use your .env file
+// [LOCAL USE]: Uncomment import
  const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
 
-// [PREVIEW USE]: Keep empty for preview
+// [PREVIEW USE]:
 //const GEMINI_API_KEY = "";
 
 // 3. FIREBASE SETUP
-// [LOCAL USE]: Uncomment the import below so your local firebase.js is used!
+// [LOCAL USE]: Uncomment import
  import { auth } from './firebase'; 
 
-// [PREVIEW USE]: This handles the environment switch safely
+// [PREVIEW USE]:
 let localAuth = null;
-try {
-  if (typeof auth !== 'undefined') {
-    localAuth = auth;
-  }
-} catch (e) { /* ignore */ }
-
+try { if (typeof auth !== 'undefined') localAuth = auth; } catch (e) {}
 let appAuth = localAuth;
-
 try {
-  // Check for the environment variable config injection often used in these setups
   if (typeof __firebase_config !== 'undefined') {
     const firebaseConfig = JSON.parse(__firebase_config);
     const app = initializeApp(firebaseConfig);
     appAuth = getAuth(app);
   } else if (!appAuth) {
-    console.warn("⚠️ Local Mode: Firebase Auth not initialized. Did you uncomment 'import { auth } from ./firebase'?");
+    console.warn("⚠️ Local Mode: Firebase Auth not initialized.");
   }
 } catch (error) {
   console.error("Firebase initialization warning:", error);
 }
 
+// 4. RESUME CONTEXT (THE BRAIN)
+// [LOCAL USE]: Uncomment this import to use the external file we just created!
+ import { systemPrompt as externalSystemPrompt } from './data/resumeContext';
+
+// [PREVIEW USE]: Inline fallback so preview works
+//const inlineSystemPrompt = `
+//  You are the AI Digital Twin of Raphael J. Edwards. 
+// You are a Technology Executive & Services Architect based in Boston.
+//  HERE IS YOUR RESUME DATA:
+//  - Expertise: Team Strategy, Cybersecurity, Cloud Computing, AI & Future Tech.
+//  - Contact: raphael@raphaeljedwards.com.
+`;
 
 // --- DATA ---
 const PROJECT_ITEMS = [
@@ -166,19 +170,10 @@ const ChatInterface = ({ user }) => {
     // Using the stable flash model
     const targetModel = "gemini-2.5-flash";
 
-    try {
-      const systemPrompt = `
-        You are the AI Digital Twin of Raphael J. Edwards. 
-        You are a Technology Executive & Services Architect based in Boston.
-        Your tone is professional, strategic, yet approachable.
-        
-        HERE IS YOUR RESUME DATA:
-        - Expertise: Team Strategy, Cybersecurity, Cloud Computing, AI & Future Tech.
-        - Projects: Connected Vehicle Architecture (OTA for 1M+ cars), Secure Financial Transformation ($70M+ portfolio), Operational Intelligence (VMO saving 2300 hours), Strategic Revenue Architecture ($70k to $12M ARR).
-        - Leadership Style: "Building resilient teams. Solving complex problems." You believe in blameless post-mortems and high-performance cultures.
-        - Contact: raphael@raphaeljedwards.com.
-      `;
+    // [LOCAL USE]: Switch this to use 'externalSystemPrompt' if you uncommented the import above
+    const systemContext = typeof externalSystemPrompt !== 'undefined' ? externalSystemPrompt : inlineSystemPrompt;
 
+    try {
       const historyForApi = newMessages.map(msg => ({
         role: msg.role === 'user' ? 'user' : 'model',
         parts: [{ text: msg.text }]
@@ -189,7 +184,7 @@ const ChatInterface = ({ user }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [
-            { role: 'user', parts: [{ text: systemPrompt }] }, 
+            { role: 'user', parts: [{ text: systemContext }] }, 
             ...historyForApi 
           ]
         })
