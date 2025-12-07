@@ -11,11 +11,14 @@ import { getAuth, onAuthStateChanged, signOut, signInAnonymously, signInWithCust
  import bostonSkyline from './assets/boston-skyline.jpg';
 
 // --- GEMINI API CONFIGURATION ---
-// GET YOUR KEY HERE: https://aistudio.google.com/app/apikey
-// Best Practice: We are now pulling this from the environment variables.
-// Ensure you have VITE_GEMINI_API_KEY set in your .env file or Vercel project settings.
-// We use a safe check (import.meta.env && ...) to prevent crashes if the environment object is missing.
-const GEMINI_API_KEY = (import.meta.env && import.meta.env.VITE_GEMINI_API_KEY) || "";
+// 1. FOR LOCAL/VERCEL DEPLOYMENT:
+//    Uncomment the line below to securely pull the key from your .env file.
+    const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+
+// 2. FOR PREVIEW ONLY:
+//    We leave this empty to prevent "import.meta" build errors in this specific preview environment.
+//    (The preview environment targets ES2015 which doesn't support import.meta)
+const GEMINI_API_KEY = ""; 
 
 // --- FIREBASE SETUP (SAFE MODE) ---
 let auth = null;
@@ -169,7 +172,8 @@ const ChatInterface = ({ user }) => {
         parts: [{ text: msg.text }]
       }));
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+      // NOTE: Using 'gemini-1.5-flash-001' which is the stable version ID, as the alias can sometimes be flaky.
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-001:generateContent?key=${GEMINI_API_KEY}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
