@@ -1,48 +1,45 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Terminal, ChevronRight, Users, Lock, Cloud, BrainCircuit, MapPin, Linkedin, Globe, Mail, Menu, X as CloseIcon, MessageSquare, Send } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
-import { getAuth, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken } from 'firebase/auth';
+import { getAuth, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 
-// [CRITICAL FOR LOCAL USE]
-// 1. Uncomment the import below to use your new Login.jsx file.
- import Login from './components/Login';
-
-// 2. Uncomment your local assets
+// --- ASSET CONFIGURATION ---
+// 1. FOR LOCAL/VERCEL: Uncomment these imports
  import headshot from './assets/headshot.jpg';
  import bostonSkyline from './assets/boston-skyline.jpg';
 
-// --- GEMINI API CONFIGURATION ---
-// 1. FOR PRODUCTION (Vercel/Local):
-//    Uncomment the line below.
-    const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+// 2. FOR PREVIEW (Placeholders):
+//const HEADSHOT_URL = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?fit=crop&w=800&q=80";
+//const BOSTON_SKYLINE_URL = "https://images.unsplash.com/photo-1506191845112-c72635417cb3?fit=crop&w=1920&q=80";
 
-// 2. FOR PREVIEW (Current):
+// --- GEMINI API KEY ---
+// 1. FOR PRODUCTION (Vercel/Local): Uncomment this line.
+ const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+
+// 2. FOR PREVIEW: Keep this empty to prevent build errors in this window.
 //const GEMINI_API_KEY = ""; 
 
 // --- FIREBASE SETUP ---
 let auth = null;
 try {
   if (typeof __firebase_config !== 'undefined') {
+    // Canvas/Preview Environment
     const firebaseConfig = JSON.parse(__firebase_config);
     const app = initializeApp(firebaseConfig);
     auth = getAuth(app);
   } else {
-    console.warn("⚠️ Firebase config not found. Running in Offline/Demo Mode.");
+    // Local/Vercel Environment
+    // NOTE: Ensure you have initialized Firebase in your project if this block runs.
+    // Ideally, you would import 'auth' from your firebase.js here, but since we are
+    // in a single-file mode, we will try to grab the existing app if possible.
+    // If you have a separate firebase.js, you might need to adjust this part locally.
+    console.warn("⚠️ Running in Local/Vercel Mode. Ensure Firebase is initialized.");
   }
 } catch (error) {
   console.error("Firebase initialization failed:", error);
 }
 
-// --- ASSETS ---
-// 1. FOR LOCAL (Uncomment these):
- const HEADSHOT_URL = headshot;
- const BOSTON_SKYLINE_URL = bostonSkyline;
-
-// 2. FOR PREVIEW (Keep these):
-//const HEADSHOT_URL = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?fit=crop&w=800&q=80";
-//const BOSTON_SKYLINE_URL = "https://images.unsplash.com/photo-1506191845112-c72635417cb3?fit=crop&w=1920&q=80";
-
-// --- MOCK DATA ---
+// --- DATA ---
 const PROJECT_ITEMS = [
   { id: 1, title: "Connected Vehicle Architecture", category: "Future Tech", image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1000&auto=format&fit=crop", description: "Architected the secure Over-The-Air (OTA) delivery framework supporting 1M+ connected vehicles." },
   { id: 2, title: "Secure Financial Transformation", category: "Cybersecurity", image: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1000&auto=format&fit=crop", description: "Directed the $70M+ services portfolio securing critical cloud workloads for top financial institutions." },
@@ -69,45 +66,59 @@ const NAV_LINKS = ["Home", "Projects", "Services", "Blog", "Contact"];
 
 // --- COMPONENTS ---
 
-// [DELETE THIS COMPONENT LOCALLY]
-// This is only here so the preview works. In your local project, 
-// you will use the import from './components/Login' instead.
-const PreviewLogin = ({ onOfflineLogin }) => {
+const Login = ({ onOfflineLogin }) => {
   const handleLogin = async () => {
-    if (auth) {
-      try {
-        await signInAnonymously(auth);
-      } catch (error) {
-        console.error("Login failed:", error);
-      }
-    } else {
+    // If auth is null (local dev without config), fallback to offline mode
+    if (!auth) {
+      console.log("Offline mode: simulating login");
       if (onOfflineLogin) onOfflineLogin();
+      return;
+    }
+
+    try {
+      // 1. Try Google Auth first
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      console.warn("Google Sign-In failed or was blocked:", error);
+      
+      // 2. Fallback to Anonymous if Google fails (useful for previews/iframes)
+      if (error.code === 'auth/popup-blocked' || error.code === 'auth/operation-not-supported-in-this-environment') {
+         // alert("Popup blocked. Falling back to Anonymous Auth.");
+         await signInAnonymously(auth);
+      } else {
+         alert(`Authentication failed: ${error.message}`);
+      }
     }
   };
 
   return (
-    <div className="text-center animate-in fade-in zoom-in-95 duration-300">
-      <div className="bg-neutral-900 border border-neutral-800 p-12 rounded-2xl max-w-md w-full shadow-2xl mx-auto">
-        <div className="w-16 h-16 bg-rose-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+    <div className="flex flex-col items-center justify-center min-h-[50vh] p-4 bg-neutral-950 text-white font-sans animate-in fade-in zoom-in-95 duration-300">
+      <div className="bg-neutral-900 border border-neutral-800 p-8 rounded-2xl text-center max-w-md w-full shadow-2xl">
+        <div className="bg-neutral-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
           <Lock className="w-8 h-8 text-rose-500" />
         </div>
-        <h2 className="text-2xl font-bold mb-4 text-white">Restricted Access</h2>
+        <h2 className="text-2xl font-bold text-white mb-2">Restricted Access</h2>
         <p className="text-neutral-400 mb-8">
-          {auth ? "Identity verification required." : "Server connection offline. Enter Demo Mode?"}
+          This area requires Director-level clearance. Please authenticate to continue.
         </p>
         <button 
           onClick={handleLogin}
-          className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 px-6 rounded-md transition-colors flex items-center justify-center gap-2"
+          className="w-full bg-white text-neutral-950 font-bold py-3 px-6 rounded-lg hover:bg-neutral-200 transition-colors flex items-center justify-center gap-2"
         >
-          <Terminal size={18} />
-          {auth ? "Authenticate Session" : "Launch Offline Demo"}
+          <svg className="w-5 h-5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+          </svg>
+          Sign in with Google
         </button>
       </div>
     </div>
   );
 };
 
-// Chat Component
 const ChatInterface = ({ user }) => {
   const [messages, setMessages] = useState([
     { role: 'assistant', text: `Identity confirmed: ${user?.email || 'Director'}. Accessing neural archives... Hello. I am Raphael's digital twin. Ask me about his architecture philosophy, leadership style, or technical experience.` }
@@ -116,12 +127,8 @@ const ChatInterface = ({ user }) => {
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const handleSendMessage = async (e) => {
@@ -137,7 +144,7 @@ const ChatInterface = ({ user }) => {
       setTimeout(() => {
         setMessages(prev => [...prev, { 
           role: 'assistant', 
-          text: "⚠️ MISSING API KEY: I am currently offline. To enable my brain, please add `VITE_GEMINI_API_KEY` to your environment variables." 
+          text: "⚠️ MISSING API KEY: I am currently offline. Please set `VITE_GEMINI_API_KEY` in your environment variables." 
         }]);
         setIsTyping(false);
       }, 500);
@@ -150,19 +157,13 @@ const ChatInterface = ({ user }) => {
       const systemPrompt = `
         You are the AI Digital Twin of Raphael J. Edwards. 
         You are a Technology Executive & Services Architect based in Boston.
-        Your tone is professional, strategic, yet approachable with a slight cyberpunk/futuristic flair suitable for a high-tech portfolio.
+        Your tone is professional, strategic, yet approachable.
         
         HERE IS YOUR RESUME DATA:
         - Expertise: Team Strategy, Cybersecurity, Cloud Computing, AI & Future Tech.
         - Projects: Connected Vehicle Architecture (OTA for 1M+ cars), Secure Financial Transformation ($70M+ portfolio), Operational Intelligence (VMO saving 2300 hours), Strategic Revenue Architecture ($70k to $12M ARR).
         - Leadership Style: "Building resilient teams. Solving complex problems." You believe in blameless post-mortems and high-performance cultures.
         - Contact: raphael@raphaeljedwards.com.
-        
-        INSTRUCTIONS:
-        - Answer the user's questions based on this data.
-        - Be concise and impactful.
-        - If asked about something not in the data, politely pivot back to your expertise or offer to contact the real Raphael.
-        - Do not make up facts not present here.
       `;
 
       const historyForApi = newMessages.map(msg => ({
@@ -182,17 +183,14 @@ const ChatInterface = ({ user }) => {
       });
 
       const data = await response.json();
+      if (data.error) throw new Error(data.error.message);
 
-      if (data.error) {
-        throw new Error(data.error.message);
-      }
-
-      const botResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "I'm having trouble connecting to the neural net right now.";
+      const botResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "I'm having trouble connecting right now.";
       setMessages(prev => [...prev, { role: 'assistant', text: botResponse }]);
 
     } catch (error) {
       console.error("Gemini API Error:", error);
-      setMessages(prev => [...prev, { role: 'assistant', text: `Connection Error: ${error.message}.` }]);
+      setMessages(prev => [...prev, { role: 'assistant', text: `Connection Error: ${error.message}` }]);
     } finally {
       setIsTyping(false);
     }
@@ -200,7 +198,6 @@ const ChatInterface = ({ user }) => {
 
   return (
     <div className="flex flex-col h-[80vh] bg-neutral-900 border border-neutral-800 rounded-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-300">
-      {/* Header */}
       <div className="bg-neutral-950 p-4 border-b border-neutral-800 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_#22c55e]"></div>
@@ -208,8 +205,6 @@ const ChatInterface = ({ user }) => {
         </div>
         <BrainCircuit className="text-neutral-600" size={20} />
       </div>
-
-      {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6 font-mono text-sm">
         {messages.map((msg, idx) => (
           <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -230,21 +225,9 @@ const ChatInterface = ({ user }) => {
         )}
         <div ref={messagesEndRef} />
       </div>
-
-      {/* Input Area */}
       <form onSubmit={handleSendMessage} className="p-4 bg-neutral-950 border-t border-neutral-800 flex gap-4">
-        <input 
-          type="text" 
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          placeholder="Enter query parameters..."
-          className="flex-1 bg-neutral-900 border border-neutral-800 rounded-md px-4 py-3 text-white focus:outline-none focus:border-rose-500 font-mono text-sm transition-colors"
-        />
-        <button 
-          type="submit"
-          disabled={!inputValue.trim() || isTyping}
-          className="bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 rounded-md transition-colors flex items-center justify-center"
-        >
+        <input type="text" value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder="Enter query parameters..." className="flex-1 bg-neutral-900 border border-neutral-800 rounded-md px-4 py-3 text-white focus:outline-none focus:border-rose-500 font-mono text-sm transition-colors" />
+        <button type="submit" disabled={!inputValue.trim() || isTyping} className="bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 rounded-md transition-colors flex items-center justify-center">
           <Send size={20} />
         </button>
       </form>
@@ -256,50 +239,36 @@ const App = () => {
   const [activeCategory, setActiveCategory] = useState("All");
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  
-  // Auth State
   const [user, setUser] = useState(null);
   const [showChat, setShowChat] = useState(false);
 
-  // Categories Calculation
   const categories = ["All", ...new Set(PROJECT_ITEMS.map(item => item.category))];
-  
-  const filteredItems = activeCategory === "All" 
-    ? PROJECT_ITEMS 
-    : PROJECT_ITEMS.filter(item => item.category === activeCategory);
+  const filteredItems = activeCategory === "All" ? PROJECT_ITEMS : PROJECT_ITEMS.filter(item => item.category === activeCategory);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 50);
     window.addEventListener('scroll', handleScroll);
     
-    // Auth Initialization & Listener
+    // Auth Listener
     if (auth) {
       const initAuth = async () => {
           if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-              try {
-                  await signInWithCustomToken(auth, __initial_auth_token);
-              } catch (e) {
-                  console.error("Custom token auth failed", e);
-              }
+              try { await signInWithCustomToken(auth, __initial_auth_token); } catch (e) { console.error(e); }
           }
       };
       initAuth();
-
-      const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-        setUser(currentUser);
-      });
+      const unsubscribe = onAuthStateChanged(auth, setUser);
       return () => {
         window.removeEventListener('scroll', handleScroll);
         unsubscribe();
       };
     } else {
-      // Cleanup only for scroll if auth is missing
       return () => window.removeEventListener('scroll', handleScroll);
     }
   }, []);
 
   const scrollToSection = (id) => {
-    setShowChat(false); // Close chat if navigating
+    setShowChat(false);
     const element = document.getElementById(id);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });
@@ -309,105 +278,58 @@ const App = () => {
 
   const handleLogout = async () => {
     try {
-      if (auth) {
-        await signOut(auth);
-      } else {
-        setUser(null);
-      }
+      if (auth) await signOut(auth);
+      else setUser(null);
     } catch (error) {
       console.error("Logout failed", error);
     }
   };
 
-  const handleOfflineLogin = () => {
-    setUser({ uid: 'offline-demo-user', email: 'Offline Director' });
-  };
+  const handleOfflineLogin = () => setUser({ uid: 'offline-demo-user', email: 'Offline Director' });
 
-  // Protected Chat Interface
   if (showChat) {
     return (
       <div className="min-h-screen bg-neutral-950 text-neutral-100 font-sans flex flex-col">
-        {/* Chat Nav */}
         <nav className="border-b border-neutral-800 p-4 flex justify-between items-center bg-neutral-900">
           <button onClick={() => setShowChat(false)} className="flex items-center gap-2 hover:text-rose-500 transition-colors font-medium">
             <ChevronRight className="rotate-180" size={20} /> Back to Portfolio
           </button>
-          
           <div className="flex items-center gap-4">
-            {user ? (
+            {user && (
               <>
                 <span className="text-sm text-neutral-400 hidden md:inline">{user.email || 'Anonymous Director'}</span>
                 <button onClick={handleLogout} className="text-xs border border-neutral-700 px-3 py-1 rounded hover:bg-neutral-800 transition-colors">Sign Out</button>
               </>
-            ) : null}
+            )}
           </div>
         </nav>
-
-        {/* Auth Logic */}
         <div className="flex-1 flex items-center justify-center p-4">
-          {!user ? (
-            // FOR LOCAL: Replace <PreviewLogin /> with <Login />
-            // and remove the onOfflineLogin prop.
-            // <Login />
-            <PreviewLogin onOfflineLogin={handleOfflineLogin} />
-          ) : (
-             <div className="w-full max-w-6xl mx-auto">
-                <ChatInterface user={user} />
-             </div>
-          )}
+          {!user ? <Login onOfflineLogin={handleOfflineLogin} /> : <div className="w-full max-w-6xl mx-auto"><ChatInterface user={user} /></div>}
         </div>
       </div>
     );
   }
 
-  // Main Portfolio Interface
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 font-sans selection:bg-rose-600 selection:text-white">
       {/* Navigation */}
       <nav className={`fixed w-full z-50 transition-all duration-300 border-b border-white/5 ${isScrolled ? 'bg-neutral-950/90 backdrop-blur-md py-4 shadow-xl' : 'bg-transparent py-6'}`}>
         <div className="container mx-auto px-6 flex justify-between items-center">
           <div className="flex items-center gap-3 font-bold text-xl tracking-tight cursor-pointer" onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}>
-            <div className="bg-rose-600 p-1.5 rounded-md">
-              <Terminal className="w-5 h-5 text-white" />
-            </div>
+            <div className="bg-rose-600 p-1.5 rounded-md"><Terminal className="w-5 h-5 text-white" /></div>
             <span>RAPHAEL<span className="text-neutral-500">JEDWARDS</span></span>
           </div>
-
           <div className="hidden md:flex items-center gap-8 text-sm font-medium tracking-wide uppercase">
-            {NAV_LINKS.map(item => (
-              <button key={item} onClick={() => scrollToSection(item.toLowerCase())} className="hover:text-rose-500 transition-colors">
-                {item}
-              </button>
-            ))}
-            
-            {/* New Chat Button */}
-            <button 
-              onClick={() => setShowChat(true)}
-              className="flex items-center gap-2 text-rose-500 font-bold hover:text-white transition-colors"
-            >
-              <MessageSquare size={16} /> AI Chat
-            </button>
-
-            <button className="ml-4 px-5 py-2 border border-neutral-700 bg-neutral-900 hover:bg-neutral-800 hover:border-rose-500 hover:text-rose-500 transition-all rounded-md text-xs font-bold" onClick={() => window.open('/Raphael_Edwards_CV.pdf', '_blank')}>
-              Download CV
-            </button>
+            {NAV_LINKS.map(item => <button key={item} onClick={() => scrollToSection(item.toLowerCase())} className="hover:text-rose-500 transition-colors">{item}</button>)}
+            <button onClick={() => setShowChat(true)} className="flex items-center gap-2 text-rose-500 font-bold hover:text-white transition-colors"><MessageSquare size={16} /> AI Chat</button>
+            <button className="ml-4 px-5 py-2 border border-neutral-700 bg-neutral-900 hover:bg-neutral-800 hover:border-rose-500 hover:text-rose-500 transition-all rounded-md text-xs font-bold" onClick={() => window.open('/Raphael_Edwards_CV.pdf', '_blank')}>Download CV</button>
           </div>
-
-          <button className="md:hidden text-neutral-100" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-            {isMobileMenuOpen ? <CloseIcon /> : <Menu />}
-          </button>
+          <button className="md:hidden text-neutral-100" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>{isMobileMenuOpen ? <CloseIcon /> : <Menu />}</button>
         </div>
-
         {isMobileMenuOpen && (
           <div className="md:hidden absolute top-full left-0 w-full bg-neutral-950 border-b border-neutral-800 p-6 flex flex-col gap-4 shadow-2xl">
-            {NAV_LINKS.map(item => (
-              <button key={item} onClick={() => scrollToSection(item.toLowerCase())} className="text-left py-3 border-b border-neutral-900 hover:text-rose-500 transition-colors uppercase font-medium">
-                {item}
-              </button>
-            ))}
-            <button onClick={() => { setShowChat(true); setIsMobileMenuOpen(false); }} className="text-left py-3 border-b border-neutral-900 text-rose-500 font-bold uppercase flex items-center gap-2">
-               <MessageSquare size={16} /> AI Assistant
-            </button>
+            {NAV_LINKS.map(item => <button key={item} onClick={() => scrollToSection(item.toLowerCase())} className="text-left py-3 border-b border-neutral-900 hover:text-rose-500 transition-colors uppercase font-medium">{item}</button>)}
+            <button onClick={() => { setShowChat(true); setIsMobileMenuOpen(false); }} className="text-left py-3 border-b border-neutral-900 text-rose-500 font-bold uppercase flex items-center gap-2"><MessageSquare size={16} /> AI Assistant</button>
           </div>
         )}
       </nav>
@@ -417,26 +339,15 @@ const App = () => {
         <div className="absolute inset-0 z-0">
           <img src={BOSTON_SKYLINE_URL} alt="Boston Skyline" className="w-full h-full object-cover opacity-30 grayscale contrast-125" />
           <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/50 to-neutral-950/30" />
-          {/* SAFE BACKGROUND PATTERN */}
           <div className="absolute inset-0 opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/circuit-board.png')]"></div>
         </div>
-
         <div className="relative z-10 px-6 max-w-5xl mx-auto mt-16 text-center">
           <div className="inline-block px-3 py-1 mb-6 border border-rose-500/30 rounded-full bg-rose-500/10 text-rose-500 text-xs font-bold tracking-widest uppercase">Technology Leadership</div>
-          <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter mb-8 leading-none">
-            BUILDING <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-500 to-orange-600">RESILIENT TEAMS.</span> <br />
-            SOLVING <span className="text-white">COMPLEX PROBLEMS.</span>
-          </h1>
-          <p className="text-lg md:text-2xl text-neutral-400 mb-10 max-w-2xl mx-auto leading-relaxed font-light border-l-4 border-rose-600 pl-6 text-left">
-            Technology Executive & Services Architect based in Boston.
-          </p>
+          <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter mb-8 leading-none">BUILDING <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-500 to-orange-600">RESILIENT TEAMS.</span> <br />SOLVING <span className="text-white">COMPLEX PROBLEMS.</span></h1>
+          <p className="text-lg md:text-2xl text-neutral-400 mb-10 max-w-2xl mx-auto leading-relaxed font-light border-l-4 border-rose-600 pl-6 text-left">Technology Executive & Services Architect based in Boston.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button onClick={() => scrollToSection('projects')} className="bg-white text-black px-8 py-4 rounded-sm font-bold hover:bg-neutral-200 transition-colors flex items-center justify-center gap-2">
-              View Projects <ChevronRight size={18} />
-            </button>
-            <button onClick={() => scrollToSection('contact')} className="px-8 py-4 rounded-sm font-bold border border-white/20 hover:bg-white/10 transition-colors backdrop-blur-sm">
-              Consulting Inquiries
-            </button>
+            <button onClick={() => scrollToSection('projects')} className="bg-white text-black px-8 py-4 rounded-sm font-bold hover:bg-neutral-200 transition-colors flex items-center justify-center gap-2">View Projects <ChevronRight size={18} /></button>
+            <button onClick={() => scrollToSection('contact')} className="px-8 py-4 rounded-sm font-bold border border-white/20 hover:bg-white/10 transition-colors backdrop-blur-sm">Consulting Inquiries</button>
           </div>
         </div>
       </section>
@@ -457,9 +368,7 @@ const App = () => {
              <div className="relative order-1 md:order-2">
               <div className="aspect-square rounded-2xl overflow-hidden bg-neutral-900 border border-neutral-800 relative z-10 group">
                 <img src={HEADSHOT_URL} alt="Raphael J. Edwards" className="w-full h-full object-cover grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700" />
-                <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black/90 to-transparent">
-                  <div className="flex items-center gap-2 text-rose-500 mb-1 font-bold"><MapPin size={16} /> Boston, MA</div>
-                </div>
+                <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black/90 to-transparent"><div className="flex items-center gap-2 text-rose-500 mb-1 font-bold"><MapPin size={16} /> Boston, MA</div></div>
               </div>
               <div className="absolute inset-0 border-2 border-rose-500/20 rounded-2xl transform translate-x-4 translate-y-4 -z-0"></div>
             </div>
@@ -491,9 +400,7 @@ const App = () => {
               <p className="text-neutral-400 max-w-xl">A selection of strategic initiatives, technical implementations, and organizational transformations.</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              {categories.map(cat => (
-                <button key={cat} onClick={() => setActiveCategory(cat)} className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${activeCategory === cat ? 'bg-rose-600 text-white' : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white'}`}>{cat}</button>
-              ))}
+              {categories.map(cat => <button key={cat} onClick={() => setActiveCategory(cat)} className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${activeCategory === cat ? 'bg-rose-600 text-white' : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white'}`}>{cat}</button>)}
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
