@@ -7,12 +7,12 @@ import { getAuth, onAuthStateChanged, signOut, signInAnonymously, signInWithCust
 
 // 1. ASSETS
 // [LOCAL USE]: Uncomment imports, comment out consts
- import headshot from './assets/headshot.jpg';
- import bostonSkyline from './assets/boston-skyline.jpg';
+// import headshot from './assets/headshot.jpg';
+// import bostonSkyline from './assets/boston-skyline.jpg';
 
 // [PREVIEW USE]:
-//const headshot = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?fit=crop&w=800&q=80";
-//const bostonSkyline = "https://images.unsplash.com/photo-1506191845112-c72635417cb3?fit=crop&w=1920&q=80";
+const headshot = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?fit=crop&w=800&q=80";
+const bostonSkyline = "https://images.unsplash.com/photo-1506191845112-c72635417cb3?fit=crop&w=1920&q=80";
 
 // 2. GEMINI API KEY
 // [LOCAL USE]: Uncomment import
@@ -23,19 +23,35 @@ import { getAuth, onAuthStateChanged, signOut, signInAnonymously, signInWithCust
 
 // 3. FIREBASE SETUP
 // [LOCAL USE]: Uncomment import
- //import { auth } from './firebase'; 
+// import { auth } from './firebase'; 
+
+// [PREVIEW USE]:
+let localAuth = null;
+try { if (typeof auth !== 'undefined') localAuth = auth; } catch (e) {}
+let appAuth = localAuth;
+try {
+  if (typeof __firebase_config !== 'undefined') {
+    const firebaseConfig = JSON.parse(__firebase_config);
+    const app = initializeApp(firebaseConfig);
+    appAuth = getAuth(app);
+  } else if (!appAuth) {
+    console.warn("⚠️ Local Mode: Firebase Auth not initialized.");
+  }
+} catch (error) {
+  console.error("Firebase initialization warning:", error);
+}
 
 // 4. RESUME CONTEXT (THE BRAIN)
 // [LOCAL USE]: Uncomment this import to use the external file we just created!
- import { systemPrompt as externalSystemPrompt } from './data/resumeContext';
+// import { systemPrompt as externalSystemPrompt } from './data/resumeContext';
 
 // [PREVIEW USE]: Inline fallback so preview works
-//const inlineSystemPrompt = `
-//  You are the AI Digital Twin of Raphael J. Edwards. 
-// You are a Technology Executive & Services Architect based in Boston.
-//  HERE IS YOUR RESUME DATA:
-//  - Expertise: Team Strategy, Cybersecurity, Cloud Computing, AI & Future Tech.
-//  - Contact: raphael@raphaeljedwards.com.
+const inlineSystemPrompt = `
+  You are the AI Digital Twin of Raphael J. Edwards. 
+  You are a Technology Executive & Services Architect based in Boston.
+  HERE IS YOUR RESUME DATA:
+  - Expertise: Team Strategy, Cybersecurity, Cloud Computing, AI & Future Tech.
+  - Contact: raphael@raphaeljedwards.com.
 `;
 
 // --- DATA ---
