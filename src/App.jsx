@@ -109,7 +109,7 @@ const App = () => {
             SOLVING <span className="text-white">COMPLEX PROBLEMS.</span>
           </h1>
           <p className="text-lg md:text-2xl text-neutral-400 mb-10 max-w-2xl mx-auto leading-relaxed font-light border-l-4 border-rose-600 pl-6 text-left">
-            Professional Services Director & Technology Leader based in Boston.
+            Technology Executive & Services Architect based in Boston.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button onClick={() => scrollToSection('projects')} className="bg-white text-black px-8 py-4 rounded-sm font-bold hover:bg-neutral-200 transition-colors flex items-center justify-center gap-2">
