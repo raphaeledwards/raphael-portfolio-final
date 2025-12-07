@@ -3,9 +3,7 @@ import { Terminal, ChevronRight, Users, Lock, Cloud, BrainCircuit, MapPin, Linke
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken } from 'firebase/auth';
 
-// Restore local imports for your local environment
-// NOTE: These may show as broken in this Canvas preview because the files don't exist here,
-// but they will work perfectly on your local machine.
+// --- LOCAL ASSETS ---
 import headshot from './assets/headshot.jpg';
 import bostonSkyline from './assets/boston-skyline.jpg';
 
@@ -26,7 +24,6 @@ try {
 }
 
 // --- ASSETS ---
-// Using the imported local files
 const HEADSHOT_URL = headshot;
 const BOSTON_SKYLINE_URL = bostonSkyline;
 
@@ -58,12 +55,10 @@ const NAV_LINKS = ["Home", "Projects", "Services", "Blog", "Contact"];
 // --- COMPONENTS ---
 
 // Integrated Login Component
-// Now accepts an onOfflineLogin callback to handle local dev environments
 const Login = ({ onOfflineLogin }) => {
   const handleLogin = async () => {
     if (auth) {
       try {
-        // In this environment, we use anonymous auth or custom token if available
         await signInAnonymously(auth);
       } catch (error) {
         console.error("Login failed:", error);
@@ -400,7 +395,7 @@ const App = () => {
               <h2 className="text-3xl md:text-5xl font-bold mb-6">Let's Solve Something Hard.</h2>
               <p className="text-neutral-400 mb-10 max-w-lg mx-auto">Available for speaking engagements, advisory board roles, and strategic consulting.</p>
               <div className="flex flex-col md:flex-row justify-center gap-6">
-                <a href="mailto:raphael@raphaeljedwards.com" className="flex items-center justify-center gap-3 bg-rose-600 text-white px-8 py-4 rounded-md font-bold hover:bg-rose-700 transition-colors"><Mail size={20} /> Email Me!/a>
+                <a href="mailto:raphael@raphaeljedwards.com" className="flex items-center justify-center gap-3 bg-rose-600 text-white px-8 py-4 rounded-md font-bold hover:bg-rose-700 transition-colors"><Mail size={20} /> Email Me!</a>
                 <a href="https://www.linkedin.com/in/raphaeljedwards/" className="flex items-center justify-center gap-3 bg-neutral-800 text-white px-8 py-4 rounded-md font-bold hover:bg-neutral-700 transition-colors border border-neutral-700"><Linkedin size={20} /> Connect on LinkedIn</a>
               </div>
             </div>
