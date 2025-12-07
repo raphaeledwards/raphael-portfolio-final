@@ -7,11 +7,11 @@ import { getAuth, onAuthStateChanged, signOut, signInAnonymously, signInWithCust
 // 1. LOCAL SETUP (Uncomment these locally)
 // ==========================================
 
-// import Login from './components/Login';
-// import headshot from './assets/headshot.jpg';
-// import bostonSkyline from './assets/boston-skyline.jpg';
-// import { auth as localAuth } from './firebase'; 
-// const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+ import Login from './components/Login';
+ import headshot from './assets/headshot.jpg';
+ import bostonSkyline from './assets/boston-skyline.jpg';
+ import { auth as localAuth } from './firebase'; 
+ const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
 
 
 // ==========================================
@@ -19,13 +19,13 @@ import { getAuth, onAuthStateChanged, signOut, signInAnonymously, signInWithCust
 // ==========================================
 
 // Placeholders so the preview doesn't crash
-const headshot = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?fit=crop&w=800&q=80";
-const bostonSkyline = "https://images.unsplash.com/photo-1506191845112-c72635417cb3?fit=crop&w=1920&q=80";
-const localAuth = null; // Dummy auth
-const PREVIEW_API_KEY = ""; // Empty key for preview
+//const headshot = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?fit=crop&w=800&q=80";
+//const bostonSkyline = "https://images.unsplash.com/photo-1506191845112-c72635417cb3?fit=crop&w=1920&q=80";
+//onst localAuth = null; // Dummy auth
+//const PREVIEW_API_KEY = ""; // Empty key for preview
 
 // Temporary inline Login for preview only (Delete this locally)
-const PreviewLogin = ({ onOfflineLogin }) => (
+//const PreviewLogin = ({ onOfflineLogin }) => (
   <div className="flex flex-col items-center justify-center min-h-[50vh] p-4 bg-neutral-950 text-white font-sans animate-in fade-in zoom-in-95 duration-300">
     <div className="bg-neutral-900 border border-neutral-800 p-8 rounded-2xl text-center max-w-md w-full shadow-2xl">
       <div className="bg-neutral-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
