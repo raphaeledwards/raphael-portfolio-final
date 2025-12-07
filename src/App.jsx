@@ -7,8 +7,15 @@ import { getAuth, onAuthStateChanged, signOut, signInAnonymously, signInWithCust
 // IMPORTANT: The live preview here cannot access your local './assets/' folder.
 // I have commented these out so the preview works. 
 // UNCOMMENT these two lines for your local Vercel build:
-import headshot from './assets/headshot.jpg';
-import bostonSkyline from './assets/boston-skyline.jpg';
+ import headshot from './assets/headshot.jpg';
+ import bostonSkyline from './assets/boston-skyline.jpg';
+
+// --- GEMINI API CONFIGURATION ---
+// GET YOUR KEY HERE: https://aistudio.google.com/app/apikey
+// Best Practice: We are now pulling this from the environment variables.
+// Ensure you have VITE_GEMINI_API_KEY set in your .env file or Vercel project settings.
+// We use a safe check (import.meta.env && ...) to prevent crashes if the environment object is missing.
+const GEMINI_API_KEY = (import.meta.env && import.meta.env.VITE_GEMINI_API_KEY) || "";
 
 // --- FIREBASE SETUP (SAFE MODE) ---
 let auth = null;
@@ -27,8 +34,8 @@ try {
 // --- ASSETS ---
 // 1. FOR LOCAL/VERCEL (Your actual files):
 //    Uncomment these lines when running on your machine:
-const HEADSHOT_URL = headshot;
-const BOSTON_SKYLINE_URL = bostonSkyline;
+ const HEADSHOT_URL = headshot;
+ const BOSTON_SKYLINE_URL = bostonSkyline;
 
 // 2. FOR PREVIEW (Temporary Placeholders):
 //const HEADSHOT_URL = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?fit=crop&w=800&q=80";
@@ -124,21 +131,73 @@ const ChatInterface = ({ user }) => {
     setInputValue("");
     setIsTyping(true);
 
-    // SIMULATED AI RESPONSE (Placeholder for Gemini API)
-    // In the next step, we will connect this to the real API.
-    setTimeout(() => {
-      let responseText = "I am currently running in simulation mode. Connect me to the Gemini API to unlock full cognitive capabilities.";
-      
-      const lowerInput = inputValue.toLowerCase();
-      if (lowerInput.includes("experience") || lowerInput.includes("work")) {
-        responseText = "Raphael has extensive experience architecting secure cloud solutions and leading high-performance engineering teams. Would you like to see a specific case study?";
-      } else if (lowerInput.includes("contact") || lowerInput.includes("email")) {
-        responseText = "You can reach Raphael directly at raphael@raphaeljedwards.com. He is currently open to advisory roles.";
+    if (!GEMINI_API_KEY) {
+      setTimeout(() => {
+        setMessages(prev => [...prev, { 
+          role: 'assistant', 
+          text: "⚠️ MISSING API KEY: I am currently offline. To enable my brain, please add `VITE_GEMINI_API_KEY` to your environment variables (.env locally or Vercel settings)." 
+        }]);
+        setIsTyping(false);
+      }, 500);
+      return;
+    }
+
+    try {
+      // Construct the system prompt using the portfolio data
+      const systemPrompt = `
+        You are the AI Digital Twin of Raphael J. Edwards. 
+        You are a Technology Executive & Services Architect based in Boston.
+        Your tone is professional, strategic, yet approachable with a slight cyberpunk/futuristic flair suitable for a high-tech portfolio.
+        
+        HERE IS YOUR RESUME DATA:
+        - Expertise: Team Strategy, Cybersecurity, Cloud Computing, AI & Future Tech.
+        - Projects: Connected Vehicle Architecture (OTA for 1M+ cars), Secure Financial Transformation ($70M+ portfolio), Operational Intelligence (VMO saving 2300 hours), Strategic Revenue Architecture ($70k to $12M ARR).
+        - Leadership Style: "Building resilient teams. Solving complex problems." You believe in blameless post-mortems and high-performance cultures.
+        - Contact: raphael@raphaeljedwards.com.
+        
+        INSTRUCTIONS:
+        - Answer the user's questions based on this data.
+        - Be concise and impactful.
+        - If asked about something not in the data, politely pivot back to your expertise or offer to contact the real Raphael.
+        - Do not make up facts not present here.
+      `;
+
+      // Format history for Gemini
+      // Gemini API expects: { role: "user" | "model", parts: [{ text: string }] }
+      const historyForApi = newMessages.map(msg => ({
+        role: msg.role === 'user' ? 'user' : 'model',
+        parts: [{ text: msg.text }]
+      }));
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [
+            { role: 'user', parts: [{ text: systemPrompt }] }, // Prepend system prompt as context
+            ...historyForApi // Append conversation history
+          ]
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.error) {
+        throw new Error(data.error.message);
       }
 
-      setMessages(prev => [...prev, { role: 'assistant', text: responseText }]);
+      const botResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "I'm having trouble connecting to the neural net right now.";
+
+      setMessages(prev => [...prev, { role: 'assistant', text: botResponse }]);
+
+    } catch (error) {
+      console.error("Gemini API Error:", error);
+      setMessages(prev => [...prev, { role: 'assistant', text: `Connection Error: ${error.message}. Please check your API key settings.` }]);
+    } finally {
       setIsTyping(false);
-    }, 1500);
+    }
   };
 
   return (
