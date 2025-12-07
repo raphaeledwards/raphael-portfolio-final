@@ -1,33 +1,39 @@
 import React from 'react';
 import { Lock } from 'lucide-react';
+import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 
-// --- CONFIGURATION FOR LOCAL VS PREVIEW ---
+// [CRITICAL FOR LOCAL USE]
+// Uncomment the line below in your local project so it can find your firebase config.
+// In this preview, we comment it out to prevent build errors since '../firebase' doesn't exist here.
+ import { auth } from '../firebase'; 
 
-// 1. FOR PREVIEW (Keep this active here so you can see the UI):
-//const signInWithGoogle = async () => {
-  console.log("Simulating Google Sign In...");
-  return new Promise(resolve => setTimeout(resolve, 1000));
-};
-
-// 2. FOR PRODUCTION (Uncomment this line when you save to your local src/components/Login.jsx):
- import { signInWithGoogle } from '../firebase';
-
-// ------------------------------------------
+// [FOR PREVIEW ONLY]
+// This dummy auth object prevents the preview from crashing. 
+// Delete this line in your local project.
+//const auth = {}; 
 
 const Login = () => {
   const handleLogin = async () => {
     try {
-      await signInWithGoogle();
-      // In the real app, this won't alert; the auth state change will redirect the user.
-      alert("Authentication simulation successful! (This will open a Google popup on your real site)");
+      // Ensure we have a valid auth instance before calling Firebase
+      if (!auth.currentUser && !auth.app) {
+         console.warn("Firebase auth not found. Make sure you uncommented the import in Login.jsx");
+         alert("Firebase config not found. (Did you uncomment the import in Login.jsx?)");
+         return;
+      }
+
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+      // No need to redirect manually; the onAuthStateChanged listener in App.jsx 
+      // will detect the login and switch the view automatically.
     } catch (error) {
       console.error("Login failed:", error);
-      alert("Authentication failed. Check console for details.");
+      alert(`Authentication failed: ${error.message}`);
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[50vh] p-4 bg-neutral-950 text-white font-sans">
+    <div className="flex flex-col items-center justify-center min-h-[50vh] p-4 bg-neutral-950 text-white font-sans animate-in fade-in zoom-in-95 duration-300">
       <div className="bg-neutral-900 border border-neutral-800 p-8 rounded-2xl text-center max-w-md w-full shadow-2xl">
         <div className="bg-neutral-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
           <Lock className="w-8 h-8 text-rose-500" />
