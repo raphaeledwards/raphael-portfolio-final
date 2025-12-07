@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Terminal, ChevronRight, Users, Lock, Cloud, BrainCircuit, MapPin, Linkedin, Globe, Mail, Menu, X as CloseIcon } from 'lucide-react';
 import headshot from './assets/headshot.jpg';
+import bostonskyline from './assets/boston-skyline.jpg';
 
 
 // Mock Data for Projects
@@ -96,7 +97,7 @@ const App = () => {
       {/* Hero Section */}
       <section id="home" className="relative h-screen flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
-          <img src="https://images.unsplash.com/photo-1549724103-9c878e1b017b?q=80&w=2000&auto=format&fit=crop" alt="Boston Skyline" className="w-full h-full object-cover opacity-30 grayscale contrast-125" />
+          <img src={bostonskyline } alt="Boston Skyline" className="w-full h-full object-cover opacity-30 grayscale contrast-125" />
           <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/50 to-neutral-950/30" />
           {/* SAFE BACKGROUND PATTERN */}
           <div className="absolute inset-0 opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/circuit-board.png')]"></div>
