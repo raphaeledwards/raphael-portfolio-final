@@ -23,7 +23,7 @@ import { getAuth, onAuthStateChanged, signOut, signInAnonymously, signInWithCust
 
 // 3. FIREBASE SETUP
 // [LOCAL USE]: Uncomment import
-// import { auth } from './firebase'; 
+ import { auth } from './firebase'; 
 
 // [PREVIEW USE]:
 let localAuth = null;
@@ -43,7 +43,7 @@ try {
 
 // 4. RESUME CONTEXT (THE BRAIN)
 // [LOCAL USE]: Uncomment this import to use the external file we just created!
-// import { systemPrompt as externalSystemPrompt } from './data/resumeContext';
+ import { systemPrompt as externalSystemPrompt } from './data/resumeContext';
 
 // [PREVIEW USE]: Inline fallback so preview works
 const inlineSystemPrompt = `
