@@ -44,6 +44,9 @@ try {
 // 4. RESUME CONTEXT (THE BRAIN)
 // [LOCAL USE]: Uncomment this import to use the external file we just created!
  import { systemPrompt as externalSystemPrompt } from './data/resumeContext';
+
+// [PREVIEW USE]: Inline fallback so preview works
+//const inlineSystemPrompt = `
   You are the AI Digital Twin of Raphael J. Edwards. 
   You are a Technology Executive & Services Architect based in Boston.
   HERE IS YOUR RESUME DATA:
