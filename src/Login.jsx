@@ -4,7 +4,7 @@ import { Lock } from 'lucide-react';
 // --- CONFIGURATION FOR LOCAL VS PREVIEW ---
 
 // 1. FOR PREVIEW (Keep this active here so you can see the UI):
-const signInWithGoogle = async () => {
+//const signInWithGoogle = async () => {
   console.log("Simulating Google Sign In...");
   return new Promise(resolve => setTimeout(resolve, 1000));
 };
