@@ -3,25 +3,23 @@ import { Terminal, ChevronRight, Users, Lock, Cloud, BrainCircuit, MapPin, Linke
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken } from 'firebase/auth';
 
-// --- ASSET CONFIGURATION ---
-// IMPORTANT: The live preview here cannot access your local './assets/' folder.
-// I have commented these out so the preview works. 
-// UNCOMMENT these two lines for your local Vercel build:
+// [CRITICAL FOR LOCAL USE]
+// 1. Uncomment the import below to use your new Login.jsx file.
+ import Login from './components/Login';
+
+// 2. Uncomment your local assets
  import headshot from './assets/headshot.jpg';
  import bostonSkyline from './assets/boston-skyline.jpg';
 
 // --- GEMINI API CONFIGURATION ---
-// GET YOUR KEY HERE: https://aistudio.google.com/app/apikey
-//
 // 1. FOR PRODUCTION (Vercel/Local):
-//    Uncomment the line below to pull the key from your environment variables (.env).
+//    Uncomment the line below.
     const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
 
 // 2. FOR PREVIEW (Current):
-//    We use an empty string here to prevent "import.meta" build errors in this preview.
 //const GEMINI_API_KEY = ""; 
 
-// --- FIREBASE SETUP (SAFE MODE) ---
+// --- FIREBASE SETUP ---
 let auth = null;
 try {
   if (typeof __firebase_config !== 'undefined') {
@@ -36,12 +34,11 @@ try {
 }
 
 // --- ASSETS ---
-// 1. FOR LOCAL/VERCEL (Your actual files):
-//    Uncomment these lines when running on your machine:
+// 1. FOR LOCAL (Uncomment these):
  const HEADSHOT_URL = headshot;
  const BOSTON_SKYLINE_URL = bostonSkyline;
 
-// 2. FOR PREVIEW (Temporary Placeholders):
+// 2. FOR PREVIEW (Keep these):
 //const HEADSHOT_URL = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?fit=crop&w=800&q=80";
 //const BOSTON_SKYLINE_URL = "https://images.unsplash.com/photo-1506191845112-c72635417cb3?fit=crop&w=1920&q=80";
 
@@ -72,7 +69,10 @@ const NAV_LINKS = ["Home", "Projects", "Services", "Blog", "Contact"];
 
 // --- COMPONENTS ---
 
-const Login = ({ onOfflineLogin }) => {
+// [DELETE THIS COMPONENT LOCALLY]
+// This is only here so the preview works. In your local project, 
+// you will use the import from './components/Login' instead.
+const PreviewLogin = ({ onOfflineLogin }) => {
   const handleLogin = async () => {
     if (auth) {
       try {
@@ -81,7 +81,6 @@ const Login = ({ onOfflineLogin }) => {
         console.error("Login failed:", error);
       }
     } else {
-      console.log("Running in offline mode - simulating login");
       if (onOfflineLogin) onOfflineLogin();
     }
   };
@@ -94,7 +93,7 @@ const Login = ({ onOfflineLogin }) => {
         </div>
         <h2 className="text-2xl font-bold mb-4 text-white">Restricted Access</h2>
         <p className="text-neutral-400 mb-8">
-          {auth ? "Identity verification required to access the neural interface." : "Server connection offline. Enter Demo Mode?"}
+          {auth ? "Identity verification required." : "Server connection offline. Enter Demo Mode?"}
         </p>
         <button 
           onClick={handleLogin}
@@ -108,7 +107,7 @@ const Login = ({ onOfflineLogin }) => {
   );
 };
 
-// --- CHAT INTERFACE ---
+// Chat Component
 const ChatInterface = ({ user }) => {
   const [messages, setMessages] = useState([
     { role: 'assistant', text: `Identity confirmed: ${user?.email || 'Director'}. Accessing neural archives... Hello. I am Raphael's digital twin. Ask me about his architecture philosophy, leadership style, or technical experience.` }
@@ -145,7 +144,6 @@ const ChatInterface = ({ user }) => {
       return;
     }
 
-    // UPDATED MODEL: Using the confirmed available model from user diagnostics
     const targetModel = "gemini-2.5-flash";
 
     try {
@@ -348,7 +346,10 @@ const App = () => {
         {/* Auth Logic */}
         <div className="flex-1 flex items-center justify-center p-4">
           {!user ? (
-            <Login onOfflineLogin={handleOfflineLogin} />
+            // FOR LOCAL: Replace <PreviewLogin /> with <Login />
+            // and remove the onOfflineLogin prop.
+            // <Login />
+            <PreviewLogin onOfflineLogin={handleOfflineLogin} />
           ) : (
              <div className="w-full max-w-6xl mx-auto">
                 <ChatInterface user={user} />
