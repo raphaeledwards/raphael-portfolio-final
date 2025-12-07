@@ -350,7 +350,7 @@ const App = () => {
       {/* Hero Section */}
       <section id="home" className="relative h-screen flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
-          <img src={BOSTON_SKYLINE_URL} alt="Boston Skyline" className="w-full h-full object-cover opacity-30 grayscale contrast-125" />
+          <img src={bostonSkyline_URL} alt="Boston Skyline" className="w-full h-full object-cover opacity-30 grayscale contrast-125" />
           <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/50 to-neutral-950/30" />
           <div className="absolute inset-0 opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/circuit-board.png')]"></div>
         </div>
@@ -380,7 +380,7 @@ const App = () => {
             </div>
              <div className="relative order-1 md:order-2">
               <div className="aspect-square rounded-2xl overflow-hidden bg-neutral-900 border border-neutral-800 relative z-10 group">
-                <img src={HEADSHOT_URL} alt="Raphael J. Edwards" className="w-full h-full object-cover grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700" />
+                <img src={headshot_URL} alt="Raphael J. Edwards" className="w-full h-full object-cover grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700" />
                 <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black/90 to-transparent"><div className="flex items-center gap-2 text-rose-500 mb-1 font-bold"><MapPin size={16} /> Boston, MA</div></div>
               </div>
               <div className="absolute inset-0 border-2 border-rose-500/20 rounded-2xl transform translate-x-4 translate-y-4 -z-0"></div>
