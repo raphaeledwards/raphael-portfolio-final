@@ -3,60 +3,54 @@ import { Terminal, ChevronRight, Users, Lock, Cloud, BrainCircuit, MapPin, Linke
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 
-// ==========================================
-// 1. LOCAL SETUP (Uncomment these locally)
-// ==========================================
+// --- CONFIGURATION ---
 
- import Login from './components/Login';
+// 1. ASSETS (Defaulting to URLs to guarantee build success)
+// Once deployed, you can uncomment the local imports if your files are in src/assets/
  import headshot from './assets/headshot.jpg';
  import bostonSkyline from './assets/boston-skyline.jpg';
- import { auth as localAuth } from './firebase'; 
+//const HEADSHOT_URL = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?fit=crop&w=800&q=80";
+//const BOSTON_SKYLINE_URL = "https://images.unsplash.com/photo-1506191845112-c72635417cb3?fit=crop&w=1920&q=80";
+
+// 2. GEMINI API KEY
+// [CRITICAL FOR VERCEL/LOCAL]
+// Uncomment the line below when running locally to access your .env file.
  const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
 
+// [FOR PREVIEW ONLY]
+// Kept empty here to prevent build errors in the preview window.
+//const GEMINI_API_KEY = "";
 
-// ==========================================
-// 2. PREVIEW SETUP (Ignore locally)
-// ==========================================
+// 3. FIREBASE SETUP
+// Uses the standard Vercel/Local config pattern.
+// Ensure your firebase.js is set up or __firebase_config is available.
+let auth = null;
 
-// Placeholders so the preview doesn't crash
-//const headshot = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?fit=crop&w=800&q=80";
-//const bostonSkyline = "https://images.unsplash.com/photo-1506191845112-c72635417cb3?fit=crop&w=1920&q=80";
-//onst localAuth = null; // Dummy auth
-//const PREVIEW_API_KEY = ""; // Empty key for preview
-
-// Temporary inline Login for preview only (Delete this locally)
-//const PreviewLogin = ({ onOfflineLogin }) => (
-  <div className="flex flex-col items-center justify-center min-h-[50vh] p-4 bg-neutral-950 text-white font-sans animate-in fade-in zoom-in-95 duration-300">
-    <div className="bg-neutral-900 border border-neutral-800 p-8 rounded-2xl text-center max-w-md w-full shadow-2xl">
-      <div className="bg-neutral-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
-        <Lock className="w-8 h-8 text-rose-500" />
-      </div>
-      <h2 className="text-2xl font-bold text-white mb-2">Restricted Access (Preview)</h2>
-      <p className="text-neutral-400 mb-8">This is a preview. Locally, this will use Google Auth.</p>
-      <button onClick={onOfflineLogin} className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 px-6 rounded-md transition-colors flex items-center justify-center gap-2">
-        <Terminal size={18} /> Enter Demo Mode
-      </button>
-    </div>
-  </div>
-);
-
-// --- FIREBASE SETUP ---
-let auth = localAuth; 
+// Try to use the local firebase export if available, otherwise fallback (handled safely)
+// We instantiate it directly here to ensure it works in a single-file context for testing
 try {
+  // Check for the environment variable config injection often used in these setups
   if (typeof __firebase_config !== 'undefined') {
     const firebaseConfig = JSON.parse(__firebase_config);
     const app = initializeApp(firebaseConfig);
     auth = getAuth(app);
+  } else {
+    // If running locally/Vercel without the injected config variable, 
+    // we assume you have initialized app elsewhere or need to do it here.
+    // For this unified file, we'll try to get the default app if it exists, 
+    // or you should import your specific 'auth' object from './firebase' if you have one.
+    // import { auth } from './firebase'; <--- Uncomment this if you have a firebase.js
+    console.log("Checking for Firebase instance...");
   }
 } catch (error) {
-  console.error("Firebase initialization failed:", error);
+  console.error("Firebase initialization warning:", error);
 }
 
-// --- CONSTANTS ---
-const HEADSHOT_URL = headshot;
-const BOSTON_SKYLINE_URL = bostonSkyline;
+// NOTE: If you have a local firebase.js, un-comment the next line and comment out the block above
+ import { auth } from './firebase'; 
 
-// --- MOCK DATA ---
+
+// --- DATA ---
 const PROJECT_ITEMS = [
   { id: 1, title: "Connected Vehicle Architecture", category: "Future Tech", image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1000&auto=format&fit=crop", description: "Architected the secure Over-The-Air (OTA) delivery framework supporting 1M+ connected vehicles." },
   { id: 2, title: "Secure Financial Transformation", category: "Cybersecurity", image: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1000&auto=format&fit=crop", description: "Directed the $70M+ services portfolio securing critical cloud workloads for top financial institutions." },
@@ -81,7 +75,62 @@ const BLOG_POSTS = [
 
 const NAV_LINKS = ["Home", "Projects", "Services", "Blog", "Contact"];
 
-// --- CHAT INTERFACE ---
+// --- COMPONENTS ---
+
+// 1. INLINED LOGIN COMPONENT (With Google Auth)
+//    This replaces the import to prevent "File Not Found" build errors
+const Login = ({ onOfflineLogin }) => {
+  const handleLogin = async () => {
+    // Basic check to see if auth is initialized
+    if (!auth) {
+      console.warn("Auth not initialized. Check firebase configuration.");
+      // Fallback for demo purposes if auth fails
+      if (onOfflineLogin) onOfflineLogin();
+      return;
+    }
+
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      console.error("Login failed:", error);
+      if (error.code === 'auth/popup-blocked' || error.code === 'auth/operation-not-supported-in-this-environment') {
+         // Fallback for restrictive environments
+         await signInAnonymously(auth);
+      } else {
+         alert(`Authentication failed: ${error.message}`);
+      }
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[50vh] p-4 bg-neutral-950 text-white font-sans animate-in fade-in zoom-in-95 duration-300">
+      <div className="bg-neutral-900 border border-neutral-800 p-8 rounded-2xl text-center max-w-md w-full shadow-2xl">
+        <div className="bg-neutral-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
+          <Lock className="w-8 h-8 text-rose-500" />
+        </div>
+        <h2 className="text-2xl font-bold text-white mb-2">Restricted Access</h2>
+        <p className="text-neutral-400 mb-8">
+          This area requires Director-level clearance. Please authenticate to continue.
+        </p>
+        <button 
+          onClick={handleLogin}
+          className="w-full bg-white text-neutral-950 font-bold py-3 px-6 rounded-lg hover:bg-neutral-200 transition-colors flex items-center justify-center gap-2"
+        >
+          <svg className="w-5 h-5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+          </svg>
+          Sign in with Google
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// 2. CHAT INTERFACE
 const ChatInterface = ({ user }) => {
   const [messages, setMessages] = useState([
     { role: 'assistant', text: `Identity confirmed: ${user?.email || 'Director'}. Accessing neural archives... Hello. I am Raphael's digital twin. Ask me about his architecture philosophy, leadership style, or technical experience.` }
@@ -103,26 +152,19 @@ const ChatInterface = ({ user }) => {
     setInputValue("");
     setIsTyping(true);
 
-    // Use specific Gemini model
-    const targetModel = "gemini-2.5-flash";
-    
-    // Select Key: Use PREVIEW_API_KEY in preview, otherwise try to use the imported GEMINI_API_KEY if uncommented locally
-    let apiKey = PREVIEW_API_KEY;
-    try {
-        // Safe check for local var if uncommented
-        if (typeof GEMINI_API_KEY !== 'undefined') apiKey = GEMINI_API_KEY; 
-    } catch(e) {}
-
-    if (!apiKey) {
+    if (!GEMINI_API_KEY) {
       setTimeout(() => {
         setMessages(prev => [...prev, { 
           role: 'assistant', 
-          text: "⚠️ MISSING API KEY: Please set VITE_GEMINI_API_KEY in your .env file locally." 
+          text: "⚠️ MISSING API KEY: Please set `VITE_GEMINI_API_KEY` in your environment variables and uncomment the line in App.jsx." 
         }]);
         setIsTyping(false);
       }, 500);
       return;
     }
+
+    // Using the stable flash model
+    const targetModel = "gemini-2.5-flash";
 
     try {
       const systemPrompt = `
@@ -142,7 +184,7 @@ const ChatInterface = ({ user }) => {
         parts: [{ text: msg.text }]
       }));
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${apiKey}`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${GEMINI_API_KEY}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -275,9 +317,7 @@ const App = () => {
           </div>
         </nav>
         <div className="flex-1 flex items-center justify-center p-4">
-          {/* LOCAL: Uncomment <Login /> and comment out <PreviewLogin /> */}
-          {/* !user ? <Login /> : <div ... */}
-          {!user ? <PreviewLogin onOfflineLogin={handleOfflineLogin} /> : <div className="w-full max-w-6xl mx-auto"><ChatInterface user={user} /></div>}
+          {!user ? <Login onOfflineLogin={handleOfflineLogin} /> : <div className="w-full max-w-6xl mx-auto"><ChatInterface user={user} /></div>}
         </div>
       </div>
     );
