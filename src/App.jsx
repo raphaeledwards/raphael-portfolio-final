@@ -31,6 +31,7 @@ const HEADSHOT_URL = headshot;
 const BOSTON_SKYLINE_URL = bostonSkyline;
 
 // 2. FOR PREVIEW (Temporary Placeholders):
+//const HEADSHOT_URL = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?fit=crop&w=800&q=80";
 //const BOSTON_SKYLINE_URL = "https://images.unsplash.com/photo-1506191845112-c72635417cb3?fit=crop&w=1920&q=80";
 
 // --- MOCK DATA ---
@@ -141,7 +142,7 @@ const ChatInterface = ({ user }) => {
   };
 
   return (
-    <div className="flex flex-col h-[600px] bg-neutral-900 border border-neutral-800 rounded-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-300">
+    <div className="flex flex-col h-[80vh] bg-neutral-900 border border-neutral-800 rounded-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-300">
       {/* Header */}
       <div className="bg-neutral-950 p-4 border-b border-neutral-800 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -290,7 +291,7 @@ const App = () => {
           {!user ? (
             <Login onOfflineLogin={handleOfflineLogin} />
           ) : (
-             <div className="w-full max-w-4xl mx-auto">
+             <div className="w-full max-w-6xl mx-auto">
                 <ChatInterface user={user} />
              </div>
           )}
