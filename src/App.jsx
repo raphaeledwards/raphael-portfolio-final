@@ -1,15 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { Terminal, ChevronRight, Users, Lock, Cloud, BrainCircuit, MapPin, Linkedin, Globe, Mail, Menu, X as CloseIcon, MessageSquare } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Terminal, ChevronRight, Users, Lock, Cloud, BrainCircuit, MapPin, Linkedin, Globe, Mail, Menu, X as CloseIcon, MessageSquare, Send } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken } from 'firebase/auth';
 
-// --- LOCAL ASSETS ---
+// --- ASSET CONFIGURATION ---
+// IMPORTANT: The live preview here cannot access your local './assets/' folder.
+// I have commented these out so the preview works. 
+// UNCOMMENT these two lines for your local Vercel build:
 import headshot from './assets/headshot.jpg';
 import bostonSkyline from './assets/boston-skyline.jpg';
 
 // --- FIREBASE SETUP (SAFE MODE) ---
-// We wrap this in a try-catch to prevent the app from crashing if 
-// __firebase_config is missing (e.g., when running locally).
 let auth = null;
 try {
   if (typeof __firebase_config !== 'undefined') {
@@ -24,8 +25,13 @@ try {
 }
 
 // --- ASSETS ---
+// 1. FOR LOCAL/VERCEL (Your actual files):
+//    Uncomment these lines when running on your machine:
 const HEADSHOT_URL = headshot;
 const BOSTON_SKYLINE_URL = bostonSkyline;
+
+// 2. FOR PREVIEW (Temporary Placeholders):
+//const BOSTON_SKYLINE_URL = "https://images.unsplash.com/photo-1506191845112-c72635417cb3?fit=crop&w=1920&q=80";
 
 // --- MOCK DATA ---
 const PROJECT_ITEMS = [
@@ -64,7 +70,6 @@ const Login = ({ onOfflineLogin }) => {
         console.error("Login failed:", error);
       }
     } else {
-      // Fallback for local development
       console.log("Running in offline mode - simulating login");
       if (onOfflineLogin) onOfflineLogin();
     }
@@ -88,6 +93,103 @@ const Login = ({ onOfflineLogin }) => {
           {auth ? "Authenticate Session" : "Launch Offline Demo"}
         </button>
       </div>
+    </div>
+  );
+};
+
+// Chat Component
+const ChatInterface = ({ user }) => {
+  const [messages, setMessages] = useState([
+    { role: 'assistant', text: `Identity confirmed: ${user?.email || 'Director'}. Accessing neural archives... Hello. I am Raphael's digital twin. Ask me about his architecture philosophy, leadership style, or technical experience.` }
+  ]);
+  const [inputValue, setInputValue] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (!inputValue.trim()) return;
+
+    const newMessages = [...messages, { role: 'user', text: inputValue }];
+    setMessages(newMessages);
+    setInputValue("");
+    setIsTyping(true);
+
+    // SIMULATED AI RESPONSE (Placeholder for Gemini API)
+    // In the next step, we will connect this to the real API.
+    setTimeout(() => {
+      let responseText = "I am currently running in simulation mode. Connect me to the Gemini API to unlock full cognitive capabilities.";
+      
+      const lowerInput = inputValue.toLowerCase();
+      if (lowerInput.includes("experience") || lowerInput.includes("work")) {
+        responseText = "Raphael has extensive experience architecting secure cloud solutions and leading high-performance engineering teams. Would you like to see a specific case study?";
+      } else if (lowerInput.includes("contact") || lowerInput.includes("email")) {
+        responseText = "You can reach Raphael directly at raphael@raphaeljedwards.com. He is currently open to advisory roles.";
+      }
+
+      setMessages(prev => [...prev, { role: 'assistant', text: responseText }]);
+      setIsTyping(false);
+    }, 1500);
+  };
+
+  return (
+    <div className="flex flex-col h-[600px] bg-neutral-900 border border-neutral-800 rounded-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-300">
+      {/* Header */}
+      <div className="bg-neutral-950 p-4 border-b border-neutral-800 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_#22c55e]"></div>
+          <span className="font-mono text-sm text-neutral-400">NEURAL LINK: <span className="text-green-500">ACTIVE</span></span>
+        </div>
+        <BrainCircuit className="text-neutral-600" size={20} />
+      </div>
+
+      {/* Messages Area */}
+      <div className="flex-1 overflow-y-auto p-6 space-y-6 font-mono text-sm">
+        {messages.map((msg, idx) => (
+          <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div className={`max-w-[80%] p-4 rounded-lg ${msg.role === 'user' ? 'bg-rose-600 text-white' : 'bg-neutral-950 border border-neutral-800 text-neutral-300'}`}>
+              <span className="block text-xs opacity-50 mb-1 mb-2 font-bold uppercase tracking-wider">{msg.role === 'user' ? 'You' : 'Raphael AI'}</span>
+              <p className="leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+            </div>
+          </div>
+        ))}
+        {isTyping && (
+          <div className="flex justify-start">
+            <div className="bg-neutral-950 border border-neutral-800 p-4 rounded-lg flex gap-2 items-center">
+               <span className="w-2 h-2 bg-neutral-500 rounded-full animate-bounce"></span>
+               <span className="w-2 h-2 bg-neutral-500 rounded-full animate-bounce [animation-delay:0.2s]"></span>
+               <span className="w-2 h-2 bg-neutral-500 rounded-full animate-bounce [animation-delay:0.4s]"></span>
+            </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input Area */}
+      <form onSubmit={handleSendMessage} className="p-4 bg-neutral-950 border-t border-neutral-800 flex gap-4">
+        <input 
+          type="text" 
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          placeholder="Enter query parameters..."
+          className="flex-1 bg-neutral-900 border border-neutral-800 rounded-md px-4 py-3 text-white focus:outline-none focus:border-rose-500 font-mono text-sm transition-colors"
+        />
+        <button 
+          type="submit"
+          disabled={!inputValue.trim() || isTyping}
+          className="bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 rounded-md transition-colors flex items-center justify-center"
+        >
+          <Send size={20} />
+        </button>
+      </form>
     </div>
   );
 };
@@ -188,24 +290,9 @@ const App = () => {
           {!user ? (
             <Login onOfflineLogin={handleOfflineLogin} />
           ) : (
-            <div className="text-center animate-in fade-in zoom-in-95 duration-300">
-              <div className="bg-neutral-900 border border-neutral-800 p-12 rounded-2xl max-w-2xl w-full shadow-2xl">
-                <div className="w-16 h-16 bg-rose-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <BrainCircuit className="w-8 h-8 text-rose-500" />
-                </div>
-                <h2 className="text-3xl font-bold mb-4 text-white">Raphael AI Assistant</h2>
-                <p className="text-neutral-400 mb-8 text-lg">
-                  Welcome, Director. This is the secure interface for the AI agent.
-                  <br/>The brain isn't connected yet, but the door is unlocked.
-                </p>
-                <div className="p-4 bg-black rounded-lg border border-neutral-800 font-mono text-xs text-left text-green-500 shadow-inner">
-                  &gt; User authenticated: {user.uid}<br/>
-                  &gt; Session status: Active<br/>
-                  &gt; Connection to Gemini API: Pending...<br/>
-                  { !auth && <span className="text-yellow-500">&gt; WARNING: Running in offline demo mode.</span> }
-                </div>
-              </div>
-            </div>
+             <div className="w-full max-w-4xl mx-auto">
+                <ChatInterface user={user} />
+             </div>
           )}
         </div>
       </div>
