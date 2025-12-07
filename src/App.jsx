@@ -7,12 +7,12 @@ import { getAuth, onAuthStateChanged, signOut, signInAnonymously, signInWithCust
 
 // 1. ASSETS
 // [LOCAL USE]: Uncomment imports, comment out consts
-// import headshot from './assets/headshot.jpg';
-// import bostonSkyline from './assets/boston-skyline.jpg';
+ import headshot from './assets/headshot.jpg';
+ import bostonSkyline from './assets/boston-skyline.jpg';
 
 // [PREVIEW USE]:
-const headshot = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?fit=crop&w=800&q=80";
-const bostonSkyline = "https://images.unsplash.com/photo-1506191845112-c72635417cb3?fit=crop&w=1920&q=80";
+//const headshot = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?fit=crop&w=800&q=80";
+//const bostonSkyline = "https://images.unsplash.com/photo-1506191845112-c72635417cb3?fit=crop&w=1920&q=80";
 
 // 2. GEMINI API KEY
 // [LOCAL USE]: Uncomment import
