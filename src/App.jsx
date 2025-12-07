@@ -19,7 +19,7 @@ import { getAuth, onAuthStateChanged, signOut, signInAnonymously, signInWithCust
 
 // 2. FOR PREVIEW (Current):
 //    We use an empty string here to prevent "import.meta" build errors in this preview.
-//const GEMINI_API_KEY = ""; 
+const GEMINI_API_KEY = ""; 
 
 // --- FIREBASE SETUP (SAFE MODE) ---
 let auth = null;
