@@ -23,7 +23,7 @@ import { getAuth, onAuthStateChanged, signOut, signInAnonymously, signInWithCust
 
 // 3. FIREBASE SETUP
 // [LOCAL USE]: Uncomment import
- import { auth } from './firebase'; 
+ //import { auth } from './firebase'; 
 
 // 4. RESUME CONTEXT (THE BRAIN)
 // [LOCAL USE]: Uncomment this import to use the external file we just created!
