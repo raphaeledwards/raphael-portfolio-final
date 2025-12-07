@@ -1,10 +1,36 @@
 import React, { useState, useEffect } from 'react';
-import { Terminal, ChevronRight, Users, Lock, Cloud, BrainCircuit, MapPin, Linkedin, Globe, Mail, Menu, X as CloseIcon } from 'lucide-react';
+import { Terminal, ChevronRight, Users, Lock, Cloud, BrainCircuit, MapPin, Linkedin, Globe, Mail, Menu, X as CloseIcon, MessageSquare } from 'lucide-react';
+import { initializeApp } from 'firebase/app';
+import { getAuth, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken } from 'firebase/auth';
+
+// Restore local imports for your local environment
+// NOTE: These may show as broken in this Canvas preview because the files don't exist here,
+// but they will work perfectly on your local machine.
 import headshot from './assets/headshot.jpg';
-import bostonskyline from './assets/boston-skyline.jpg';
+import bostonSkyline from './assets/boston-skyline.jpg';
 
+// --- FIREBASE SETUP (SAFE MODE) ---
+// We wrap this in a try-catch to prevent the app from crashing if 
+// __firebase_config is missing (e.g., when running locally).
+let auth = null;
+try {
+  if (typeof __firebase_config !== 'undefined') {
+    const firebaseConfig = JSON.parse(__firebase_config);
+    const app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+  } else {
+    console.warn("⚠️ Firebase config not found. Running in Offline/Demo Mode.");
+  }
+} catch (error) {
+  console.error("Firebase initialization failed:", error);
+}
 
-// Mock Data for Projects
+// --- ASSETS ---
+// Using the imported local files
+const HEADSHOT_URL = headshot;
+const BOSTON_SKYLINE_URL = bostonSkyline;
+
+// --- MOCK DATA ---
 const PROJECT_ITEMS = [
   { id: 1, title: "Connected Vehicle Architecture", category: "Future Tech", image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1000&auto=format&fit=crop", description: "Architected the secure Over-The-Air (OTA) delivery framework supporting 1M+ connected vehicles." },
   { id: 2, title: "Secure Financial Transformation", category: "Cybersecurity", image: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1000&auto=format&fit=crop", description: "Directed the $70M+ services portfolio securing critical cloud workloads for top financial institutions." },
@@ -29,12 +55,58 @@ const BLOG_POSTS = [
 
 const NAV_LINKS = ["Home", "Projects", "Services", "Blog", "Contact"];
 
+// --- COMPONENTS ---
+
+// Integrated Login Component
+// Now accepts an onOfflineLogin callback to handle local dev environments
+const Login = ({ onOfflineLogin }) => {
+  const handleLogin = async () => {
+    if (auth) {
+      try {
+        // In this environment, we use anonymous auth or custom token if available
+        await signInAnonymously(auth);
+      } catch (error) {
+        console.error("Login failed:", error);
+      }
+    } else {
+      // Fallback for local development
+      console.log("Running in offline mode - simulating login");
+      if (onOfflineLogin) onOfflineLogin();
+    }
+  };
+
+  return (
+    <div className="text-center animate-in fade-in zoom-in-95 duration-300">
+      <div className="bg-neutral-900 border border-neutral-800 p-12 rounded-2xl max-w-md w-full shadow-2xl mx-auto">
+        <div className="w-16 h-16 bg-rose-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+          <Lock className="w-8 h-8 text-rose-500" />
+        </div>
+        <h2 className="text-2xl font-bold mb-4 text-white">Restricted Access</h2>
+        <p className="text-neutral-400 mb-8">
+          {auth ? "Identity verification required to access the neural interface." : "Server connection offline. Enter Demo Mode?"}
+        </p>
+        <button 
+          onClick={handleLogin}
+          className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 px-6 rounded-md transition-colors flex items-center justify-center gap-2"
+        >
+          <Terminal size={18} />
+          {auth ? "Authenticate Session" : "Launch Offline Demo"}
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const App = () => {
   const [activeCategory, setActiveCategory] = useState("All");
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
-  // FIX: This line defines the categories variable to prevent the crash
+  // Auth State
+  const [user, setUser] = useState(null);
+  const [showChat, setShowChat] = useState(false);
+
+  // Categories Calculation
   const categories = ["All", ...new Set(PROJECT_ITEMS.map(item => item.category))];
   
   const filteredItems = activeCategory === "All" 
@@ -44,10 +116,35 @@ const App = () => {
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 50);
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    
+    // Auth Initialization & Listener
+    if (auth) {
+      const initAuth = async () => {
+          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+              try {
+                  await signInWithCustomToken(auth, __initial_auth_token);
+              } catch (e) {
+                  console.error("Custom token auth failed", e);
+              }
+          }
+      };
+      initAuth();
+
+      const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+        setUser(currentUser);
+      });
+      return () => {
+        window.removeEventListener('scroll', handleScroll);
+        unsubscribe();
+      };
+    } else {
+      // Cleanup only for scroll if auth is missing
+      return () => window.removeEventListener('scroll', handleScroll);
+    }
   }, []);
 
   const scrollToSection = (id) => {
+    setShowChat(false); // Close chat if navigating
     const element = document.getElementById(id);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });
@@ -55,6 +152,72 @@ const App = () => {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      if (auth) {
+        await signOut(auth);
+      } else {
+        setUser(null);
+      }
+    } catch (error) {
+      console.error("Logout failed", error);
+    }
+  };
+
+  const handleOfflineLogin = () => {
+    setUser({ uid: 'offline-demo-user', email: 'Offline Director' });
+  };
+
+  // Protected Chat Interface
+  if (showChat) {
+    return (
+      <div className="min-h-screen bg-neutral-950 text-neutral-100 font-sans flex flex-col">
+        {/* Chat Nav */}
+        <nav className="border-b border-neutral-800 p-4 flex justify-between items-center bg-neutral-900">
+          <button onClick={() => setShowChat(false)} className="flex items-center gap-2 hover:text-rose-500 transition-colors font-medium">
+            <ChevronRight className="rotate-180" size={20} /> Back to Portfolio
+          </button>
+          
+          <div className="flex items-center gap-4">
+            {user ? (
+              <>
+                <span className="text-sm text-neutral-400 hidden md:inline">{user.email || 'Anonymous Director'}</span>
+                <button onClick={handleLogout} className="text-xs border border-neutral-700 px-3 py-1 rounded hover:bg-neutral-800 transition-colors">Sign Out</button>
+              </>
+            ) : null}
+          </div>
+        </nav>
+
+        {/* Auth Logic */}
+        <div className="flex-1 flex items-center justify-center p-4">
+          {!user ? (
+            <Login onOfflineLogin={handleOfflineLogin} />
+          ) : (
+            <div className="text-center animate-in fade-in zoom-in-95 duration-300">
+              <div className="bg-neutral-900 border border-neutral-800 p-12 rounded-2xl max-w-2xl w-full shadow-2xl">
+                <div className="w-16 h-16 bg-rose-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <BrainCircuit className="w-8 h-8 text-rose-500" />
+                </div>
+                <h2 className="text-3xl font-bold mb-4 text-white">Raphael AI Assistant</h2>
+                <p className="text-neutral-400 mb-8 text-lg">
+                  Welcome, Director. This is the secure interface for the AI agent.
+                  <br/>The brain isn't connected yet, but the door is unlocked.
+                </p>
+                <div className="p-4 bg-black rounded-lg border border-neutral-800 font-mono text-xs text-left text-green-500 shadow-inner">
+                  &gt; User authenticated: {user.uid}<br/>
+                  &gt; Session status: Active<br/>
+                  &gt; Connection to Gemini API: Pending...<br/>
+                  { !auth && <span className="text-yellow-500">&gt; WARNING: Running in offline demo mode.</span> }
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Main Portfolio Interface
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 font-sans selection:bg-rose-600 selection:text-white">
       {/* Navigation */}
@@ -73,6 +236,15 @@ const App = () => {
                 {item}
               </button>
             ))}
+            
+            {/* New Chat Button */}
+            <button 
+              onClick={() => setShowChat(true)}
+              className="flex items-center gap-2 text-rose-500 font-bold hover:text-white transition-colors"
+            >
+              <MessageSquare size={16} /> AI Chat
+            </button>
+
             <button className="ml-4 px-5 py-2 border border-neutral-700 bg-neutral-900 hover:bg-neutral-800 hover:border-rose-500 hover:text-rose-500 transition-all rounded-md text-xs font-bold" onClick={() => window.open('/Raphael_Edwards_CV.pdf', '_blank')}>
               Download CV
             </button>
@@ -90,6 +262,9 @@ const App = () => {
                 {item}
               </button>
             ))}
+            <button onClick={() => { setShowChat(true); setIsMobileMenuOpen(false); }} className="text-left py-3 border-b border-neutral-900 text-rose-500 font-bold uppercase flex items-center gap-2">
+               <MessageSquare size={16} /> AI Assistant
+            </button>
           </div>
         )}
       </nav>
@@ -97,7 +272,7 @@ const App = () => {
       {/* Hero Section */}
       <section id="home" className="relative h-screen flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
-          <img src={bostonskyline } alt="Boston Skyline" className="w-full h-full object-cover opacity-30 grayscale contrast-125" />
+          <img src={BOSTON_SKYLINE_URL} alt="Boston Skyline" className="w-full h-full object-cover opacity-30 grayscale contrast-125" />
           <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/50 to-neutral-950/30" />
           {/* SAFE BACKGROUND PATTERN */}
           <div className="absolute inset-0 opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/circuit-board.png')]"></div>
@@ -138,7 +313,7 @@ const App = () => {
             </div>
              <div className="relative order-1 md:order-2">
               <div className="aspect-square rounded-2xl overflow-hidden bg-neutral-900 border border-neutral-800 relative z-10 group">
-                <img src={headshot} alt="Raphael J. Edwards" className="w-full h-full object-cover grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700" />
+                <img src={HEADSHOT_URL} alt="Raphael J. Edwards" className="w-full h-full object-cover grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700" />
                 <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black/90 to-transparent">
                   <div className="flex items-center gap-2 text-rose-500 mb-1 font-bold"><MapPin size={16} /> Boston, MA</div>
                 </div>
@@ -225,7 +400,7 @@ const App = () => {
               <h2 className="text-3xl md:text-5xl font-bold mb-6">Let's Solve Something Hard.</h2>
               <p className="text-neutral-400 mb-10 max-w-lg mx-auto">Available for speaking engagements, advisory board roles, and strategic consulting.</p>
               <div className="flex flex-col md:flex-row justify-center gap-6">
-                <a href="mailto:raphaeledwards@gmail.com" className="flex items-center justify-center gap-3 bg-rose-600 text-white px-8 py-4 rounded-md font-bold hover:bg-rose-700 transition-colors"><Mail size={20} /> Email Me!</a>
+                <a href="mailto:raphael@raphaeljedwards.com" className="flex items-center justify-center gap-3 bg-rose-600 text-white px-8 py-4 rounded-md font-bold hover:bg-rose-700 transition-colors"><Mail size={20} /> Email Me!/a>
                 <a href="https://www.linkedin.com/in/raphaeljedwards/" className="flex items-center justify-center gap-3 bg-neutral-800 text-white px-8 py-4 rounded-md font-bold hover:bg-neutral-700 transition-colors border border-neutral-700"><Linkedin size={20} /> Connect on LinkedIn</a>
               </div>
             </div>
