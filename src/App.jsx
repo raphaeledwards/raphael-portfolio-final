@@ -173,8 +173,8 @@ const ChatInterface = ({ user }) => {
         parts: [{ text: msg.text }]
       }));
 
-      // NOTE: Switched to 'gemini-1.5-flash' alias which is generally more stable for beta endpoints.
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+      // NOTE: Switched to 'gemini-pro' (1.0 Pro) as a robust fallback.
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
