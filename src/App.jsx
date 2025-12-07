@@ -11,14 +11,15 @@ import { getAuth, onAuthStateChanged, signOut, signInAnonymously, signInWithCust
  import bostonSkyline from './assets/boston-skyline.jpg';
 
 // --- GEMINI API CONFIGURATION ---
-// 1. FOR LOCAL/VERCEL DEPLOYMENT:
-//    Uncomment the line below to securely pull the key from your .env file.
+// GET YOUR KEY HERE: https://aistudio.google.com/app/apikey
+//
+// 1. FOR PRODUCTION (Vercel/Local):
+//    Uncomment the line below to pull the key from your environment variables (.env).
     const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
 
-// 2. FOR PREVIEW ONLY:
-//    We leave this empty to prevent "import.meta" build errors in this specific preview environment.
-//    (The preview environment targets ES2015 which doesn't support import.meta)
-const GEMINI_API_KEY = ""; 
+// 2. FOR PREVIEW (Current):
+//    We use an empty string here to prevent "import.meta" build errors in this preview.
+//const GEMINI_API_KEY = ""; 
 
 // --- FIREBASE SETUP (SAFE MODE) ---
 let auth = null;
