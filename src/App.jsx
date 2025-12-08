@@ -11,8 +11,8 @@ import { getFirestore, collection, addDoc } from 'firebase/firestore';
  import headshot from './assets/headshot.jpg';
  import bostonSkyline from './assets/boston-skyline.jpg';
  import { auth, db } from './firebase'; 
-// import { systemPrompt as externalSystemPrompt } from './data/resumeContext';
-// const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+ import { systemPrompt as externalSystemPrompt } from './data/resumeContext';
+ const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
 
 
 // ==========================================
