@@ -4,32 +4,112 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { getFirestore, collection, addDoc } from 'firebase/firestore';
 
-// --- PRODUCTION CONFIGURATION ---
+// --- CONFIGURATION ---
 
 // 1. ASSETS
+// [LOCAL USE]: Uncomment imports, comment out consts
 import headshot from './assets/headshot.jpg';
 import bostonSkyline from './assets/boston-skyline.jpg';
 
+// [PREVIEW USE]:
+// const headshot = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?fit=crop&w=800&q=80";
+// const bostonSkyline = "https://images.unsplash.com/photo-1506191845112-c72635417cb3?fit=crop&w=1920&q=80";
+
 // 2. GEMINI API KEY
+// [LOCAL USE]: Uncomment import
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
 
+// [PREVIEW USE]:
+// const GEMINI_API_KEY = "";
+
 // 3. FIREBASE SETUP
-// Imports auth and db directly from your local firebase.js configuration
+// [LOCAL USE]: Import auth AND db
 import { auth, db } from './firebase'; 
 
+// [PREVIEW USE]:
+let localAuth = null;
+let localDb = null;
+try { 
+  if (typeof auth !== 'undefined') localAuth = auth; 
+  if (typeof db !== 'undefined') localDb = db;
+} catch (e) {}
+
+let appAuth = localAuth;
+let appDb = localDb;
+
+try {
+  if (typeof __firebase_config !== 'undefined') {
+    const firebaseConfig = JSON.parse(__firebase_config);
+    const app = initializeApp(firebaseConfig);
+    appAuth = getAuth(app);
+    appDb = getFirestore(app);
+  } else if (!appAuth) {
+    console.warn("⚠️ Local Mode: Firebase Auth not initialized.");
+  }
+} catch (error) {
+  console.error("Firebase initialization warning:", error);
+}
+
 // 4. RESUME CONTEXT (THE BRAIN)
-// Imports the external system prompt for the AI persona
+// [LOCAL USE]: Import the external brain
 import { systemPrompt as externalSystemPrompt } from './data/resumeContext';
 
+// [PREVIEW USE]: Inline fallback
+const SAFE_SYSTEM_PROMPT = typeof externalSystemPrompt !== 'undefined' 
+  ? externalSystemPrompt 
+  : "You are the AI Digital Twin of Raphael J. Edwards.";
 
-// --- DATA ---
+
+// --- DATA (ENHANCED FOR RAG) ---
 const PROJECT_ITEMS = [
-  { id: 1, title: "Connected Vehicle Architecture", category: "Future Tech", tags: ["vehicle", "ota", "architecture", "firmware", "iot", "cloud"], image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1000&auto=format&fit=crop", description: "Architected the secure Over-The-Air (OTA) delivery framework supporting 1M+ connected vehicles." },
-  { id: 2, title: "Secure Financial Transformation", category: "Cybersecurity", tags: ["security", "finance", "cloud", "zero trust", "banking", "compliance"], image: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1000&auto=format&fit=crop", description: "Directed the $70M+ services portfolio securing critical cloud workloads for top financial institutions." },
-  { id: 3, title: "Operational Intelligence (VMO)", category: "Operational Strategy", tags: ["operations", "strategy", "vmo", "efficiency", "data", "automation"], image: "https://images.unsplash.com/photo-1518186285589-2f7649de83e0?q=80&w=1000&auto=format&fit=crop", description: "Built a Value Management Office (VMO) that leveraged data to save 2,300+ field hours globally." },
-  { id: 4, title: "Strategic Revenue Architecture", category: "Revenue Growth", tags: ["revenue", "growth", "incentives", "arr", "sales", "go-to-market"], image: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=1000&auto=format&fit=crop", description: "Architected an incentive program turning a $70k investment into $12M+ in Annual Recurring Revenue." },
-  { id: 5, title: "Resilient Engineering Culture", category: "Organizational Strategy", tags: ["team", "culture", "leadership", "engineering", "post-mortem", "agile"], image: "https://images.unsplash.com/photo-1544197150-b99a580bb7a8?q=80&w=1000&auto=format&fit=crop", description: "Established a Blameless Post-Mortem program for 500+ staff to drive continuous security improvements." },
-  { id: 6, title: "Global Investment Strategy", category: "Revenue Growth", tags: ["investment", "strategy", "global", "revenue", "scale"], image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=1000&auto=format&fit=crop", description: "Led a global growth program converting a $1M investment into $28.8M in new annual recurring revenue." }
+  { 
+    id: 1, 
+    title: "Connected Vehicle Architecture", 
+    category: "Future Tech", 
+    tags: ["vehicle", "ota", "architecture", "firmware", "iot", "cloud"], // <--- TAGS ADDED
+    image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1000&auto=format&fit=crop", 
+    description: "Architected the secure Over-The-Air (OTA) delivery framework supporting 1M+ connected vehicles." 
+  },
+  { 
+    id: 2, 
+    title: "Secure Financial Transformation", 
+    category: "Cybersecurity", 
+    tags: ["security", "finance", "cloud", "zero trust", "banking", "compliance"],
+    image: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1000&auto=format&fit=crop", 
+    description: "Directed the $70M+ services portfolio securing critical cloud workloads for top financial institutions." 
+  },
+  { 
+    id: 3, 
+    title: "Operational Intelligence (VMO)", 
+    category: "Operational Strategy", 
+    tags: ["operations", "strategy", "vmo", "efficiency", "data", "automation"],
+    image: "https://images.unsplash.com/photo-1518186285589-2f7649de83e0?q=80&w=1000&auto=format&fit=crop", 
+    description: "Built a Value Management Office (VMO) that leveraged data to save 2,300+ field hours globally." 
+  },
+  { 
+    id: 4, 
+    title: "Strategic Revenue Architecture", 
+    category: "Revenue Growth", 
+    tags: ["revenue", "growth", "incentives", "arr", "sales", "go-to-market"],
+    image: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=1000&auto=format&fit=crop", 
+    description: "Architected an incentive program turning a $70k investment into $12M+ in Annual Recurring Revenue." 
+  },
+  { 
+    id: 5, 
+    title: "Resilient Engineering Culture", 
+    category: "Organizational Strategy", 
+    tags: ["team", "culture", "leadership", "engineering", "post-mortem", "agile"],
+    image: "https://images.unsplash.com/photo-1544197150-b99a580bb7a8?q=80&w=1000&auto=format&fit=crop", 
+    description: "Established a Blameless Post-Mortem program for 500+ staff to drive continuous security improvements." 
+  },
+  { 
+    id: 6, 
+    title: "Global Investment Strategy", 
+    category: "Revenue Growth", 
+    tags: ["investment", "strategy", "global", "revenue", "scale"],
+    image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=1000&auto=format&fit=crop", 
+    description: "Led a global growth program converting a $1M investment into $28.8M in new annual recurring revenue." 
+  }
 ];
 
 const EXPERTISE_AREAS = [
@@ -47,13 +127,11 @@ const BLOG_POSTS = [
 
 const NAV_LINKS = ["Home", "Projects", "Services", "Blog", "Contact"];
 
-
-// --- UTILITY: RAG RETRIEVAL ---
+// --- UTILITY: RAG RETRIEVAL (Logic to find projects) ---
 const getContextualData = (query) => {
     if (!query) return "";
     
     const lowerQuery = query.toLowerCase();
-    // Split query into keywords (longer than 3 chars to avoid noise like "the", "and")
     const keywords = lowerQuery.split(/\s+/).filter(w => w.length > 3);
     
     // Find relevant projects by tag matching
@@ -65,65 +143,46 @@ const getContextualData = (query) => {
         )
     );
 
-    if (relevantProjects.length === 0) {
-        return "";
-    }
+    if (relevantProjects.length === 0) return "";
 
-    // Format the found projects into a string chunk for the AI
-    const projectContext = relevantProjects.map(p => 
+    return relevantProjects.map(p => 
         `Project Title: ${p.title}\nCategory: ${p.category}\nDetails: ${p.description}\n`
     ).join('---\n');
-    
-    return projectContext;
 };
 
-// --- UTILITY: LOGGING ---
+// --- UTILITY: LOGGING (Save to Firebase) ---
 const logChatEntry = async (user, userInput, aiResponse) => {
-    if (!db) {
-        console.warn("Firestore not initialized. Cannot log chat entry.");
-        return;
-    }
-    
-    const userId = auth?.currentUser?.uid || 'anonymous';
-    // Using a public path structure for simplicity in this demo.
-    
+    if (!appDb) return;
+    const userId = appAuth?.currentUser?.uid || 'anonymous';
     try {
-        const chatCollection = collection(db, `chat_logs`);
-        
-        await addDoc(chatCollection, {
-            userId: userId,
+        await addDoc(collection(appDb, 'chat_logs'), {
+            userId,
             userQuery: userInput,
-            aiResponse: aiResponse,
+            aiResponse,
             timestamp: new Date(),
             model: 'gemini-2.5-flash',
             context: 'RAG-Lite'
         });
         console.log("📝 Chat entry logged to Firestore.");
     } catch (e) {
-        console.error("Error logging chat entry:", e);
+        console.error("Logging failed", e);
     }
 };
 
 // --- COMPONENTS ---
 
-// 1. INLINED LOGIN COMPONENT (With Google Auth)
 const Login = ({ onOfflineLogin }) => {
   const handleLogin = async () => {
-    if (!auth) {
-      console.warn("Auth not initialized. Check firebase configuration.");
-      // Fallback if auth is totally missing
+    if (!appAuth) {
       if (onOfflineLogin) onOfflineLogin();
       return;
     }
-
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
+      await signInWithPopup(appAuth, provider);
     } catch (error) {
-      console.error("Login failed:", error);
       if (error.code === 'auth/popup-blocked' || error.code === 'auth/operation-not-supported-in-this-environment') {
-         // Fallback for restrictive environments
-         await signInAnonymously(auth);
+         await signInAnonymously(appAuth);
       } else {
          alert(`Authentication failed: ${error.message}`);
       }
@@ -140,10 +199,7 @@ const Login = ({ onOfflineLogin }) => {
         <p className="text-neutral-400 mb-8">
           This area requires Director-level clearance. Please authenticate to continue.
         </p>
-        <button 
-          onClick={handleLogin}
-          className="w-full bg-white text-neutral-950 font-bold py-3 px-6 rounded-lg hover:bg-neutral-200 transition-colors flex items-center justify-center gap-2"
-        >
+        <button onClick={handleLogin} className="w-full bg-white text-neutral-950 font-bold py-3 px-6 rounded-lg hover:bg-neutral-200 transition-colors flex items-center justify-center gap-2">
           <svg className="w-5 h-5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
             <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
@@ -180,11 +236,7 @@ const ChatInterface = ({ user }) => {
     setInputValue("");
     setIsTyping(true);
 
-    
-    // Standard Gemini API Key from environment
-    const apiKey = GEMINI_API_KEY;
-
-    if (!apiKey) {
+    if (!GEMINI_API_KEY) {
       setTimeout(() => {
         setMessages(prev => [...prev, { 
           role: 'assistant', 
@@ -196,19 +248,26 @@ const ChatInterface = ({ user }) => {
     }
 
     const targetModel = "gemini-2.5-flash";
-    
-    // 1. RETRIEVAL: Pull context based on the current user input
     const contextualData = getContextualData(userInput);
-
-    // 2. AUGMENTATION: Build the final prompt by combining the persona and the relevant data
-    // Use externalSystemPrompt (imported from data file)
-    const baseContext = typeof externalSystemPrompt !== 'undefined' ? externalSystemPrompt : "You are a helpful assistant.";
     
+    // --- 🕵️‍♂️ START DEBUG BLOCK ---
+    console.log("%c 🕵️‍♂️ RAG DEBUGGER ", "background: #222; color: #bada55; font-weight: bold; padding: 4px;");
+    console.log("User Question:", userInput);
+    if (contextualData) {
+      console.log("%c ✅ CONTEXT FOUND! ", "background: green; color: white; font-weight: bold;");
+      console.log("Injecting:", contextualData);
+    } else {
+      console.log("%c ❌ NO CONTEXT MATCH ", "background: red; color: white; font-weight: bold;");
+      console.log("Using standard persona only.");
+    }
+    console.log("-----------------------------------------");
+    // --- 🕵️‍♂️ END DEBUG BLOCK ---
+
+    const baseContext = typeof externalSystemPrompt !== 'undefined' ? externalSystemPrompt : SAFE_SYSTEM_PROMPT;
+
     const finalSystemPrompt = contextualData 
         ? `${baseContext}\n\n[SYSTEM INJECTION: RELEVANT DATA FOUND]\nUse the following specific project details to answer the user's question:\n${contextualData}` 
-        : baseContext; // Fallback to generic persona if no specific keywords match
-
-    let aiResponse = "I'm having trouble connecting right now.";
+        : baseContext;
 
     try {
       const historyForApi = newMessages.map(msg => ({
@@ -216,12 +275,12 @@ const ChatInterface = ({ user }) => {
         parts: [{ text: msg.text }]
       }));
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${apiKey}`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${GEMINI_API_KEY}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [
-            { role: 'user', parts: [{ text: finalSystemPrompt }] }, // Use the RAG prompt
+            { role: 'user', parts: [{ text: finalSystemPrompt }] }, 
             ...historyForApi 
           ]
         })
@@ -230,17 +289,17 @@ const ChatInterface = ({ user }) => {
       const data = await response.json();
       if (data.error) throw new Error(data.error.message);
 
-      aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || aiResponse;
-      setMessages(prev => [...prev, { role: 'assistant', text: aiResponse }]);
+      const botResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "I'm having trouble connecting right now.";
+      setMessages(prev => [...prev, { role: 'assistant', text: botResponse }]);
+      
+      // Log successful interactions
+      await logChatEntry(user, userInput, botResponse); 
 
     } catch (error) {
       console.error("Gemini API Error:", error);
       setMessages(prev => [...prev, { role: 'assistant', text: `Connection Error: ${error.message}` }]);
-      aiResponse = `Gemini connection failed: ${error.message}`;
     } finally {
       setIsTyping(false);
-      // LOG THE CHAT ENTRY
-      await logChatEntry(user, userInput, aiResponse); 
     }
   };
 
@@ -298,8 +357,14 @@ const App = () => {
     window.addEventListener('scroll', handleScroll);
     
     // Auth Listener
-    if (auth) {
-      const unsubscribe = onAuthStateChanged(auth, setUser);
+    if (appAuth) {
+      const initAuth = async () => {
+          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+              try { await signInWithCustomToken(appAuth, __initial_auth_token); } catch (e) { console.error(e); }
+          }
+      };
+      initAuth();
+      const unsubscribe = onAuthStateChanged(appAuth, setUser);
       return () => {
         window.removeEventListener('scroll', handleScroll);
         unsubscribe();
@@ -320,7 +385,7 @@ const App = () => {
 
   const handleLogout = async () => {
     try {
-      if (auth) await signOut(auth);
+      if (appAuth) await signOut(appAuth);
       else setUser(null);
     } catch (error) {
       console.error("Logout failed", error);
