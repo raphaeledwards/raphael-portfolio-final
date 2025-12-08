@@ -1,9 +1,8 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
-import { getAnalytics } from "firebase/analytics";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth"; // Added missing imports
+import { getFirestore } from "firebase/firestore"; // Added for RAG logging/Analytics
+import { getAnalytics } from "firebase/analytics"; // Added for Analytics
 
-// Your web app's Firebase configuration
-// These pull from the .env file
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -16,12 +15,20 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app); // Activates the analytics service
 
-// Initialize Auth
+// Initialize Services
 export const auth = getAuth(app);
+export const db = getFirestore(app); // Exports the Database for your RAG/Analytics
 export const googleProvider = new GoogleAuthProvider();
 
-// Export helper functions for cleaner usage in components
+// Only init analytics if supported (optional safety check)
+let analytics;
+try {
+  analytics = getAnalytics(app);
+} catch (e) {
+  console.warn("Analytics not supported in this environment");
+}
+
+// Helper functions
 export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
 export const logout = () => signOut(auth);
