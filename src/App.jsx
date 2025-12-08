@@ -19,32 +19,13 @@ import { getFirestore, collection, addDoc } from 'firebase/firestore';
 // 2. PREVIEW SETUP (Ignore locally)
 // ==========================================
 
-//// Placeholders so the preview doesn't crash
+// Placeholders so the preview doesn't crash
 //const headshot = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?fit=crop&w=800&q=80";
 //const bostonSkyline = "https://images.unsplash.com/photo-1506191845112-c72635417cb3?fit=crop&w=1920&q=80";
 //let localAuth = null;
 //let localDb = null;
 //const PREVIEW_API_KEY = ""; // Empty key for preview
-
-// Inline Brain Data for Preview (Since we can't import the file)
-//const INLINE_SYSTEM_PROMPT = `
 ;
-
-// Temporary inline Login for preview only (Delete this locally)
-const PreviewLogin = ({ onOfflineLogin }) => (
-  <div className="flex flex-col items-center justify-center min-h-[50vh] p-4 bg-neutral-950 text-white font-sans animate-in fade-in zoom-in-95 duration-300">
-    <div className="bg-neutral-900 border border-neutral-800 p-8 rounded-2xl text-center max-w-md w-full shadow-2xl">
-      <div className="bg-neutral-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
-        <Lock className="w-8 h-8 text-rose-500" />
-      </div>
-      <h2 className="text-2xl font-bold text-white mb-2">Restricted Access (Preview)</h2>
-      <p className="text-neutral-400 mb-8">This is a preview. Locally, this will use Google Auth.</p>
-      <button onClick={onOfflineLogin} className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 px-6 rounded-md transition-colors flex items-center justify-center gap-2">
-        <Terminal size={18} /> Enter Demo Mode
-      </button>
-    </div>
-  </div>
-);
 
 // --- FIREBASE SETUP ---
 let appAuth = localAuth; 
@@ -61,14 +42,56 @@ try {
   console.error("Firebase initialization failed:", error);
 }
 
-// --- MOCK DATA ---
+// --- DATA (ENHANCED FOR RAG) ---
 const PROJECT_ITEMS = [
-  { id: 1, title: "Connected Vehicle Architecture", category: "Future Tech", tags: ["vehicle", "ota", "architecture", "firmware", "iot", "cloud"], image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1000&auto=format&fit=crop", description: "Architected the secure Over-The-Air (OTA) delivery framework supporting 1M+ connected vehicles." },
-  { id: 2, title: "Secure Financial Transformation", category: "Cybersecurity", tags: ["security", "finance", "cloud", "zero trust", "banking", "compliance"], image: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1000&auto=format&fit=crop", description: "Directed the $70M+ services portfolio securing critical cloud workloads for top financial institutions." },
-  { id: 3, title: "Operational Intelligence (VMO)", category: "Operational Strategy", tags: ["operations", "strategy", "vmo", "efficiency", "data", "automation"], image: "https://images.unsplash.com/photo-1518186285589-2f7649de83e0?q=80&w=1000&auto=format&fit=crop", description: "Built a Value Management Office (VMO) that leveraged data to save 2,300+ field hours globally." },
-  { id: 4, title: "Strategic Revenue Architecture", category: "Revenue Growth", tags: ["revenue", "growth", "incentives", "arr", "sales", "go-to-market"], image: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=1000&auto=format&fit=crop", description: "Architected an incentive program turning a $70k investment into $12M+ in Annual Recurring Revenue." },
-  { id: 5, title: "Resilient Engineering Culture", category: "Organizational Strategy", tags: ["team", "culture", "leadership", "engineering", "post-mortem", "agile"], image: "https://images.unsplash.com/photo-1544197150-b99a580bb7a8?q=80&w=1000&auto=format&fit=crop", description: "Established a Blameless Post-Mortem program for 500+ staff to drive continuous security improvements." },
-  { id: 6, title: "Global Investment Strategy", category: "Revenue Growth", tags: ["investment", "strategy", "global", "revenue", "scale"], image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=1000&auto=format&fit=crop", description: "Led a global growth program converting a $1M investment into $28.8M in new annual recurring revenue." }
+  { 
+    id: 1, 
+    title: "Connected Vehicle Architecture", 
+    category: "Future Tech", 
+    tags: ["vehicle", "ota", "architecture", "firmware", "iot", "cloud"], // <--- NEW TAGS
+    image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1000&auto=format&fit=crop", 
+    description: "Architected the secure Over-The-Air (OTA) delivery framework supporting 1M+ connected vehicles." 
+  },
+  { 
+    id: 2, 
+    title: "Secure Financial Transformation", 
+    category: "Cybersecurity", 
+    tags: ["security", "finance", "cloud", "zero trust", "banking", "compliance"],
+    image: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1000&auto=format&fit=crop", 
+    description: "Directed the $70M+ services portfolio securing critical cloud workloads for top financial institutions." 
+  },
+  { 
+    id: 3, 
+    title: "Operational Intelligence (VMO)", 
+    category: "Operational Strategy", 
+    tags: ["operations", "strategy", "vmo", "efficiency", "data", "automation"],
+    image: "https://images.unsplash.com/photo-1518186285589-2f7649de83e0?q=80&w=1000&auto=format&fit=crop", 
+    description: "Built a Value Management Office (VMO) that leveraged data to save 2,300+ field hours globally." 
+  },
+  { 
+    id: 4, 
+    title: "Strategic Revenue Architecture", 
+    category: "Revenue Growth", 
+    tags: ["revenue", "growth", "incentives", "arr", "sales", "go-to-market"],
+    image: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=1000&auto=format&fit=crop", 
+    description: "Architected an incentive program turning a $70k investment into $12M+ in Annual Recurring Revenue." 
+  },
+  { 
+    id: 5, 
+    title: "Resilient Engineering Culture", 
+    category: "Organizational Strategy", 
+    tags: ["team", "culture", "leadership", "engineering", "post-mortem", "agile"],
+    image: "https://images.unsplash.com/photo-1544197150-b99a580bb7a8?q=80&w=1000&auto=format&fit=crop", 
+    description: "Established a Blameless Post-Mortem program for 500+ staff to drive continuous security improvements." 
+  },
+  { 
+    id: 6, 
+    title: "Global Investment Strategy", 
+    category: "Revenue Growth", 
+    tags: ["investment", "strategy", "global", "revenue", "scale"],
+    image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=1000&auto=format&fit=crop", 
+    description: "Led a global growth program converting a $1M investment into $28.8M in new annual recurring revenue." 
+  }
 ];
 
 const EXPERTISE_AREAS = [
@@ -86,12 +109,15 @@ const BLOG_POSTS = [
 
 const NAV_LINKS = ["Home", "Projects", "Services", "Blog", "Contact"];
 
-// --- UTILITY: RAG RETRIEVAL ---
+// --- UTILITY: RAG RETRIEVAL (NEW) ---
 const getContextualData = (query) => {
     if (!query) return "";
+    
     const lowerQuery = query.toLowerCase();
+    // Split query into keywords (longer than 3 chars to avoid noise like "the", "and")
     const keywords = lowerQuery.split(/\s+/).filter(w => w.length > 3);
     
+    // Find relevant projects by tag matching
     const relevantProjects = PROJECT_ITEMS.filter(project => 
         keywords.some(keyword => 
           project.tags.some(tag => tag.includes(keyword)) || 
@@ -100,11 +126,16 @@ const getContextualData = (query) => {
         )
     );
 
-    if (relevantProjects.length === 0) return "";
+    if (relevantProjects.length === 0) {
+        return "";
+    }
 
-    return relevantProjects.map(p => 
+    // Format the found projects into a string chunk for the AI
+    const projectContext = relevantProjects.map(p => 
         `Project Title: ${p.title}\nCategory: ${p.category}\nDetails: ${p.description}\n`
     ).join('---\n');
+    
+    return projectContext;
 };
 
 // --- UTILITY: LOGGING ---
@@ -167,11 +198,16 @@ const ChatInterface = ({ user }) => {
     }
 
     const targetModel = "gemini-2.5-flash";
-    const contextualData = getContextualData(userInput);
     
+    // 1. RETRIEVAL (The "R" in RAG)
+    // Find projects relevant to the user's question
+    const contextualData = getContextualData(userInput);
+
+    // 2. AUGMENTATION (The "A" in RAG)
     // Choose the system prompt: External file (local) or Inline (preview)
     const baseContext = typeof externalSystemPrompt !== 'undefined' ? externalSystemPrompt : INLINE_SYSTEM_PROMPT;
 
+    // Combine the base persona with the retrieved data (if any found)
     const finalSystemPrompt = contextualData 
         ? `${baseContext}\n\n[SYSTEM INJECTION: RELEVANT DATA FOUND]\nUse the following specific project details to answer the user's question:\n${contextualData}` 
         : baseContext;
