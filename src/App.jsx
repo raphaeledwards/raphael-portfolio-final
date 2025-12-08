@@ -11,26 +11,50 @@ import { getFirestore, collection, addDoc } from 'firebase/firestore';
  import headshot from './assets/headshot.jpg';
  import bostonSkyline from './assets/boston-skyline.jpg';
  import { auth, db } from './firebase'; 
- import { systemPrompt as externalSystemPrompt } from './data/resumeContext';
- const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+// import { systemPrompt as externalSystemPrompt } from './data/resumeContext';
+// const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
 
 
 // ==========================================
-// 2. PREVIEW SETUP (Safe Fallbacks)
+// 2. PREVIEW SETUP (Ignore locally)
 // ==========================================
 
-//const headshot = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?fit=crop&w=800&q=80";
-//const bostonSkyline = "https://images.unsplash.com/photo-1506191845112-c72635417cb3?fit=crop&w=1920&q=80";
-//let localAuth = null;
-//let localDb = null;
-//const PREVIEW_API_KEY = ""; 
+// Placeholders so the preview doesn't crash
+const headshot = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?fit=crop&w=800&q=80";
+const bostonSkyline = "https://images.unsplash.com/photo-1506191845112-c72635417cb3?fit=crop&w=1920&q=80";
+let localAuth = null;
+let localDb = null;
+const PREVIEW_API_KEY = ""; // Empty key for preview
 
-// Fallback Brain (Used if external file isn't imported)
-//const INLINE_SYSTEM_PROMPT = `
-//You are the AI Digital Twin of Raphael J. Edwards. 
-//You are a Technology Executive & Services Architect.
-//Answer questions based on the context provided.
-;
+// Inline Brain Data for Preview (Fallback for RAG)
+const INLINE_SYSTEM_PROMPT = `
+You are the AI Digital Twin of Raphael J. Edwards. 
+You are a Technology Executive & Services Architect based in Boston.
+
+--- CORE IDENTITY ---
+* **Role:** Technology Executive & Services Architect
+* **Contact:** raphael@raphaeljedwards.com
+
+--- INSTRUCTIONS ---
+* Answer based on the context provided.
+* If specific project data is injected via RAG, use it to answer the question.
+`;
+
+// Temporary inline Login for preview only (Delete this locally)
+const PreviewLogin = ({ onOfflineLogin }) => (
+  <div className="flex flex-col items-center justify-center min-h-[50vh] p-4 bg-neutral-950 text-white font-sans animate-in fade-in zoom-in-95 duration-300">
+    <div className="bg-neutral-900 border border-neutral-800 p-8 rounded-2xl text-center max-w-md w-full shadow-2xl">
+      <div className="bg-neutral-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
+        <Lock className="w-8 h-8 text-rose-500" />
+      </div>
+      <h2 className="text-2xl font-bold text-white mb-2">Restricted Access (Preview)</h2>
+      <p className="text-neutral-400 mb-8">This is a preview. Locally, this will use Google Auth.</p>
+      <button onClick={onOfflineLogin} className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 px-6 rounded-md transition-colors flex items-center justify-center gap-2">
+        <Terminal size={18} /> Enter Demo Mode
+      </button>
+    </div>
+  </div>
+);
 
 // --- FIREBASE SETUP ---
 let appAuth = localAuth; 
@@ -47,56 +71,18 @@ try {
   console.error("Firebase initialization failed:", error);
 }
 
-// --- DATA (INDEXED FOR RAG) ---
+// --- CONSTANTS ---
+const HEADSHOT_URL = headshot;
+const BOSTON_SKYLINE_URL = bostonSkyline;
+
+// --- MOCK DATA ---
 const PROJECT_ITEMS = [
-  { 
-    id: 1, 
-    title: "Connected Vehicle Architecture", 
-    category: "Future Tech", 
-    tags: ["vehicle", "ota", "architecture", "firmware", "iot", "cloud"], 
-    image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1000&auto=format&fit=crop", 
-    description: "Architected the secure Over-The-Air (OTA) delivery framework supporting 1M+ connected vehicles." 
-  },
-  { 
-    id: 2, 
-    title: "Secure Financial Transformation", 
-    category: "Cybersecurity", 
-    tags: ["security", "finance", "cloud", "zero trust", "banking", "compliance"],
-    image: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1000&auto=format&fit=crop", 
-    description: "Directed the $70M+ services portfolio securing critical cloud workloads for top financial institutions." 
-  },
-  { 
-    id: 3, 
-    title: "Operational Intelligence (VMO)", 
-    category: "Operational Strategy", 
-    tags: ["operations", "strategy", "vmo", "efficiency", "data", "automation"],
-    image: "https://images.unsplash.com/photo-1518186285589-2f7649de83e0?q=80&w=1000&auto=format&fit=crop", 
-    description: "Built a Value Management Office (VMO) that leveraged data to save 2,300+ field hours globally." 
-  },
-  { 
-    id: 4, 
-    title: "Strategic Revenue Architecture", 
-    category: "Revenue Growth", 
-    tags: ["revenue", "growth", "incentives", "arr", "sales", "go-to-market"],
-    image: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=1000&auto=format&fit=crop", 
-    description: "Architected an incentive program turning a $70k investment into $12M+ in Annual Recurring Revenue." 
-  },
-  { 
-    id: 5, 
-    title: "Resilient Engineering Culture", 
-    category: "Organizational Strategy", 
-    tags: ["team", "culture", "leadership", "engineering", "post-mortem", "agile"],
-    image: "https://images.unsplash.com/photo-1544197150-b99a580bb7a8?q=80&w=1000&auto=format&fit=crop", 
-    description: "Established a Blameless Post-Mortem program for 500+ staff to drive continuous security improvements." 
-  },
-  { 
-    id: 6, 
-    title: "Global Investment Strategy", 
-    category: "Revenue Growth", 
-    tags: ["investment", "strategy", "global", "revenue", "scale"],
-    image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=1000&auto=format&fit=crop", 
-    description: "Led a global growth program converting a $1M investment into $28.8M in new annual recurring revenue." 
-  }
+  { id: 1, title: "Connected Vehicle Architecture", category: "Future Tech", tags: ["vehicle", "ota", "architecture", "firmware", "iot", "cloud"], image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1000&auto=format&fit=crop", description: "Architected the secure Over-The-Air (OTA) delivery framework supporting 1M+ connected vehicles." },
+  { id: 2, title: "Secure Financial Transformation", category: "Cybersecurity", tags: ["security", "finance", "cloud", "zero trust", "banking", "compliance"], image: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1000&auto=format&fit=crop", description: "Directed the $70M+ services portfolio securing critical cloud workloads for top financial institutions." },
+  { id: 3, title: "Operational Intelligence (VMO)", category: "Operational Strategy", tags: ["operations", "strategy", "vmo", "efficiency", "data", "automation"], image: "https://images.unsplash.com/photo-1518186285589-2f7649de83e0?q=80&w=1000&auto=format&fit=crop", description: "Built a Value Management Office (VMO) that leveraged data to save 2,300+ field hours globally." },
+  { id: 4, title: "Strategic Revenue Architecture", category: "Revenue Growth", tags: ["revenue", "growth", "incentives", "arr", "sales", "go-to-market"], image: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=1000&auto=format&fit=crop", description: "Architected an incentive program turning a $70k investment into $12M+ in Annual Recurring Revenue." },
+  { id: 5, title: "Resilient Engineering Culture", category: "Organizational Strategy", tags: ["team", "culture", "leadership", "engineering", "post-mortem", "agile"], image: "https://images.unsplash.com/photo-1544197150-b99a580bb7a8?q=80&w=1000&auto=format&fit=crop", description: "Established a Blameless Post-Mortem program for 500+ staff to drive continuous security improvements." },
+  { id: 6, title: "Global Investment Strategy", category: "Revenue Growth", tags: ["investment", "strategy", "global", "revenue", "scale"], image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=1000&auto=format&fit=crop", description: "Led a global growth program converting a $1M investment into $28.8M in new annual recurring revenue." }
 ];
 
 const EXPERTISE_AREAS = [
@@ -150,23 +136,28 @@ const logChatEntry = async (user, userInput, aiResponse) => {
             model: 'gemini-2.5-flash',
             context: 'RAG-Lite'
         });
+        console.log("📝 Chat entry logged to Firestore.");
     } catch (e) {
-        console.error("Logging failed", e);
+        console.error("Error logging chat entry:", e);
     }
 };
 
 // --- COMPONENTS ---
 
+// 1. INLINED LOGIN COMPONENT (With Google Auth)
 const Login = ({ onOfflineLogin }) => {
   const handleLogin = async () => {
     if (!appAuth) {
+      console.warn("Auth not initialized. Check firebase configuration.");
       if (onOfflineLogin) onOfflineLogin();
       return;
     }
+
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(appAuth, provider);
     } catch (error) {
+      console.error("Login failed:", error);
       if (error.code === 'auth/popup-blocked' || error.code === 'auth/operation-not-supported-in-this-environment') {
          await signInAnonymously(appAuth);
       } else {
@@ -185,7 +176,10 @@ const Login = ({ onOfflineLogin }) => {
         <p className="text-neutral-400 mb-8">
           This area requires Director-level clearance. Please authenticate to continue.
         </p>
-        <button onClick={handleLogin} className="w-full bg-white text-neutral-950 font-bold py-3 px-6 rounded-lg hover:bg-neutral-200 transition-colors flex items-center justify-center gap-2">
+        <button 
+          onClick={handleLogin}
+          className="w-full bg-white text-neutral-950 font-bold py-3 px-6 rounded-lg hover:bg-neutral-200 transition-colors flex items-center justify-center gap-2"
+        >
           <svg className="w-5 h-5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
             <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
@@ -222,7 +216,7 @@ const ChatInterface = ({ user }) => {
     setInputValue("");
     setIsTyping(true);
 
-    // KEY SELECTION LOGIC
+    // Select Key: Use PREVIEW_API_KEY in preview, otherwise try to use the imported GEMINI_API_KEY if uncommented locally
     let apiKey = PREVIEW_API_KEY;
     try {
         if (typeof GEMINI_API_KEY !== 'undefined') apiKey = GEMINI_API_KEY; 
@@ -232,29 +226,17 @@ const ChatInterface = ({ user }) => {
       setTimeout(() => {
         setMessages(prev => [...prev, { 
           role: 'assistant', 
-          text: "⚠️ MISSING API KEY: Please set VITE_GEMINI_API_KEY in your .env file locally." 
+          text: "⚠️ MISSING API KEY: Please set `VITE_GEMINI_API_KEY` in your environment variables and uncomment the line in App.jsx." 
         }]);
         setIsTyping(false);
       }, 500);
       return;
     }
 
-    // --- RAG LOGIC ---
     const targetModel = "gemini-2.5-flash";
     const contextualData = getContextualData(userInput);
     
-    // --- DEBUG LOG: SEE IF RAG IS WORKING ---
-    console.log("-----------------------------------------");
-    console.log("🕵️‍♂️ RAG Debugger");
-    console.log("User Input:", userInput);
-    if (contextualData) {
-      console.log("✅ MATCH FOUND! Injecting context:", contextualData);
-    } else {
-      console.log("❌ No specific tags found. Using base persona.");
-    }
-    console.log("-----------------------------------------");
-    
-    // Fallback logic for System Prompt
+    // RAG Logic: Use external prompt if available, otherwise inline fallback
     const baseContext = typeof externalSystemPrompt !== 'undefined' ? externalSystemPrompt : INLINE_SYSTEM_PROMPT;
 
     const finalSystemPrompt = contextualData 
@@ -403,7 +385,8 @@ const App = () => {
           </div>
         </nav>
         <div className="flex-1 flex items-center justify-center p-4">
-          {!user ? <Login onOfflineLogin={handleOfflineLogin} /> : <div className="w-full max-w-6xl mx-auto"><ChatInterface user={user} /></div>}
+          {/* LOCAL: Replace <PreviewLogin ... /> with your local <Login /> */}
+          {!user ? <PreviewLogin onOfflineLogin={handleOfflineLogin} /> : <div className="w-full max-w-6xl mx-auto"><ChatInterface user={user} /></div>}
         </div>
       </div>
     );
@@ -436,7 +419,7 @@ const App = () => {
       {/* Hero Section */}
       <section id="home" className="relative h-screen flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
-          <img src={bostonSkyline} alt="Boston Skyline" className="w-full h-full object-cover opacity-30 grayscale contrast-125" />
+          <img src={BOSTON_SKYLINE_URL} alt="Boston Skyline" className="w-full h-full object-cover opacity-30 grayscale contrast-125" />
           <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/50 to-neutral-950/30" />
           <div className="absolute inset-0 opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/circuit-board.png')]"></div>
         </div>
@@ -466,7 +449,7 @@ const App = () => {
             </div>
              <div className="relative order-1 md:order-2">
               <div className="aspect-square rounded-2xl overflow-hidden bg-neutral-900 border border-neutral-800 relative z-10 group">
-                <img src={headshot} alt="Raphael J. Edwards" className="w-full h-full object-cover grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700" />
+                <img src={HEADSHOT_URL} alt="Raphael J. Edwards" className="w-full h-full object-cover grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700" />
                 <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black/90 to-transparent"><div className="flex items-center gap-2 text-rose-500 mb-1 font-bold"><MapPin size={16} /> Boston, MA</div></div>
               </div>
               <div className="absolute inset-0 border-2 border-rose-500/20 rounded-2xl transform translate-x-4 translate-y-4 -z-0"></div>
