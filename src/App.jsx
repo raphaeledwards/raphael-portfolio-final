@@ -183,21 +183,6 @@ const ChatInterface = ({ user }) => {
     setInputValue("");
     setIsTyping(true);
 
-    // Select Key: Use PREVIEW_API_KEY in preview, otherwise try to use the imported GEMINI_API_KEY if uncommented locally
-    let apiKey = PREVIEW_API_KEY;
-    try {
-        if (typeof GEMINI_API_KEY !== 'undefined') apiKey = GEMINI_API_KEY; 
-    } catch(e) {}
-
-    if (!apiKey) {
-      setTimeout(() => {
-        setMessages(prev => [...prev, { 
-          role: 'assistant', 
-          text: "⚠️ MISSING API KEY: Please set `VITE_GEMINI_API_KEY` in your environment variables and uncomment the line in App.jsx." 
-        }]);
-        setIsTyping(false);
-      }, 500);
-      return;
     }
 
     const targetModel = "gemini-2.5-flash";
