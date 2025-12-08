@@ -27,7 +27,7 @@ import { getAuth, onAuthStateChanged, signOut, signInAnonymously, signInWithCust
 
 // [PREVIEW USE]:
 let localAuth = null;
-try { if (typeof auth !== 'undefined') localAuth = auth; } catch (e) {}
+// try { if (typeof auth !== 'undefined') localAuth = auth; } catch (e) {}
 let appAuth = localAuth;
 try {
   if (typeof __firebase_config !== 'undefined') {
@@ -46,16 +46,59 @@ try {
  import { systemPrompt as externalSystemPrompt } from './data/resumeContext';
 
 // [PREVIEW USE]: Inline fallback so preview works
-//const inlineSystemPrompt = `
+//const SAFE_SYSTEM_PROMPT = "You are the AI Digital Twin of Raphael J. Edwards. Your expertise includes Team Strategy, Cybersecurity, Cloud Computing, and AI/Future Tech. Respond based on these specializations.";
 
-// --- DATA ---
+
+// --- DATA (ENHANCED FOR RAG) ---
 const PROJECT_ITEMS = [
-  { id: 1, title: "Connected Vehicle Architecture", category: "Future Tech", image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1000&auto=format&fit=crop", description: "Architected the secure Over-The-Air (OTA) delivery framework supporting 1M+ connected vehicles." },
-  { id: 2, title: "Secure Financial Transformation", category: "Cybersecurity", image: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1000&auto=format&fit=crop", description: "Directed the $70M+ services portfolio securing critical cloud workloads for top financial institutions." },
-  { id: 3, title: "Operational Intelligence (VMO)", category: "Operational Strategy", image: "https://images.unsplash.com/photo-1518186285589-2f7649de83e0?q=80&w=1000&auto=format&fit=crop", description: "Built a Value Management Office (VMO) that leveraged data to save 2,300+ field hours globally." },
-  { id: 4, title: "Strategic Revenue Architecture", category: "Revenue Growth", image: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=1000&auto=format&fit=crop", description: "Architected an incentive program turning a $70k investment into $12M+ in Annual Recurring Revenue." },
-  { id: 5, title: "Resilient Engineering Culture", category: "Organizational Strategy", image: "https://images.unsplash.com/photo-1544197150-b99a580bb7a8?q=80&w=1000&auto=format&fit=crop", description: "Established a Blameless Post-Mortem program for 500+ staff to drive continuous security improvements." },
-  { id: 6, title: "Global Investment Strategy", category: "Revenue Growth", image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=1000&auto=format&fit=crop", description: "Led a global growth program converting a $1M investment into $28.8M in new annual recurring revenue." }
+  { 
+    id: 1, 
+    title: "Connected Vehicle Architecture", 
+    category: "Future Tech", 
+    tags: ["vehicle", "ota", "architecture", "firmware", "iot", "cloud"], // <--- NEW TAGS
+    image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1000&auto=format&fit=crop", 
+    description: "Architected the secure Over-The-Air (OTA) delivery framework supporting 1M+ connected vehicles." 
+  },
+  { 
+    id: 2, 
+    title: "Secure Financial Transformation", 
+    category: "Cybersecurity", 
+    tags: ["security", "finance", "cloud", "zero trust", "banking", "compliance"],
+    image: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1000&auto=format&fit=crop", 
+    description: "Directed the $70M+ services portfolio securing critical cloud workloads for top financial institutions." 
+  },
+  { 
+    id: 3, 
+    title: "Operational Intelligence (VMO)", 
+    category: "Operational Strategy", 
+    tags: ["operations", "strategy", "vmo", "efficiency", "data", "automation"],
+    image: "https://images.unsplash.com/photo-1518186285589-2f7649de83e0?q=80&w=1000&auto=format&fit=crop", 
+    description: "Built a Value Management Office (VMO) that leveraged data to save 2,300+ field hours globally." 
+  },
+  { 
+    id: 4, 
+    title: "Strategic Revenue Architecture", 
+    category: "Revenue Growth", 
+    tags: ["revenue", "growth", "incentives", "arr", "sales", "go-to-market"],
+    image: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=1000&auto=format&fit=crop", 
+    description: "Architected an incentive program turning a $70k investment into $12M+ in Annual Recurring Revenue." 
+  },
+  { 
+    id: 5, 
+    title: "Resilient Engineering Culture", 
+    category: "Organizational Strategy", 
+    tags: ["team", "culture", "leadership", "engineering", "post-mortem", "agile"],
+    image: "https://images.unsplash.com/photo-1544197150-b99a580bb7a8?q=80&w=1000&auto=format&fit=crop", 
+    description: "Established a Blameless Post-Mortem program for 500+ staff to drive continuous security improvements." 
+  },
+  { 
+    id: 6, 
+    title: "Global Investment Strategy", 
+    category: "Revenue Growth", 
+    tags: ["investment", "strategy", "global", "revenue", "scale"],
+    image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=1000&auto=format&fit=crop", 
+    description: "Led a global growth program converting a $1M investment into $28.8M in new annual recurring revenue." 
+  }
 ];
 
 const EXPERTISE_AREAS = [
@@ -73,16 +116,44 @@ const BLOG_POSTS = [
 
 const NAV_LINKS = ["Home", "Projects", "Services", "Blog", "Contact"];
 
+
+// --- UTILITY: RAG CONTEXTUAL DATA RETRIEVAL (NEW) ---
+const getContextualData = (query) => {
+    if (!query) return "";
+    
+    const lowerQuery = query.toLowerCase();
+    // Split query into keywords (longer than 3 chars to avoid noise like "the", "and")
+    const keywords = lowerQuery.split(/\s+/).filter(w => w.length > 3);
+    
+    // Find relevant projects by tag matching
+    const relevantProjects = PROJECT_ITEMS.filter(project => 
+        keywords.some(keyword => 
+          project.tags.some(tag => tag.includes(keyword)) || 
+          project.title.toLowerCase().includes(keyword) ||
+          project.category.toLowerCase().includes(keyword)
+        )
+    );
+
+    if (relevantProjects.length === 0) {
+        return "";
+    }
+
+    // Format the found projects into a string chunk for the AI
+    const projectContext = relevantProjects.map(p => 
+        `Project Title: ${p.title}\nCategory: ${p.category}\nDetails: ${p.description}\n`
+    ).join('---\n');
+    
+    return projectContext;
+};
+
+
 // --- COMPONENTS ---
 
 // 1. INLINED LOGIN COMPONENT (With Google Auth)
-//    This replaces the import to prevent "File Not Found" build errors
 const Login = ({ onOfflineLogin }) => {
   const handleLogin = async () => {
-    // Basic check to see if auth is initialized
     if (!appAuth) {
       console.warn("Auth not initialized. Check firebase configuration.");
-      // Fallback for demo purposes if auth fails
       if (onOfflineLogin) onOfflineLogin();
       return;
     }
@@ -93,7 +164,6 @@ const Login = ({ onOfflineLogin }) => {
     } catch (error) {
       console.error("Login failed:", error);
       if (error.code === 'auth/popup-blocked' || error.code === 'auth/operation-not-supported-in-this-environment') {
-         // Fallback for restrictive environments
          await signInAnonymously(appAuth);
       } else {
          alert(`Authentication failed: ${error.message}`);
@@ -145,7 +215,8 @@ const ChatInterface = ({ user }) => {
     e.preventDefault();
     if (!inputValue.trim()) return;
 
-    const newMessages = [...messages, { role: 'user', text: inputValue }];
+    const userInput = inputValue;
+    const newMessages = [...messages, { role: 'user', text: userInput }];
     setMessages(newMessages);
     setInputValue("");
     setIsTyping(true);
@@ -161,11 +232,19 @@ const ChatInterface = ({ user }) => {
       return;
     }
 
-    // Using the stable flash model
     const targetModel = "gemini-2.5-flash";
+    
+    // 1. RETRIEVAL (The "R" in RAG)
+    // Find projects relevant to the user's question
+    const contextualData = getContextualData(userInput);
 
-    // [LOCAL USE]: Switch this to use 'externalSystemPrompt' if you uncommented the import above
-    const systemContext = typeof externalSystemPrompt !== 'undefined' ? externalSystemPrompt : inlineSystemPrompt;
+    // 2. AUGMENTATION (The "A" in RAG)
+    // Combine the base persona with the retrieved data (if any found)
+    const baseContext = typeof externalSystemPrompt !== 'undefined' ? externalSystemPrompt : SAFE_SYSTEM_PROMPT;
+    
+    const finalSystemPrompt = contextualData 
+        ? `${baseContext}\n\n[SYSTEM INJECTION: RELEVANT DATA FOUND]\nUse the following specific project details to answer the user's question:\n${contextualData}` 
+        : baseContext; // Fallback to generic persona if no specific keywords match
 
     try {
       const historyForApi = newMessages.map(msg => ({
@@ -178,7 +257,7 @@ const ChatInterface = ({ user }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [
-            { role: 'user', parts: [{ text: systemContext }] }, 
+            { role: 'user', parts: [{ text: finalSystemPrompt }] }, 
             ...historyForApi 
           ]
         })
