@@ -1,76 +1,35 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Terminal, ChevronRight, Users, Lock, Cloud, BrainCircuit, MapPin, Linkedin, Globe, Mail, Menu, X as CloseIcon, MessageSquare, Send } from 'lucide-react';
-import { 
-  getAuth, 
-  onAuthStateChanged, 
-  signOut, 
-  signInAnonymously, 
-  signInWithCustomToken, 
-  GoogleAuthProvider, 
-  signInWithPopup 
-} from 'firebase/auth';
-import { collection, addDoc } from 'firebase/firestore';
+import { initializeApp } from 'firebase/app';
+import { getAuth, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { getFirestore, collection, addDoc } from 'firebase/firestore';
 
-// --- LOCAL IMPORTS ---
-// Ensure these files exist in your local project structure
+// --- PRODUCTION CONFIGURATION ---
+
+// 1. ASSETS
 import headshot from './assets/headshot.jpg';
 import bostonSkyline from './assets/boston-skyline.jpg';
-import { auth, db } from './firebase'; 
-import { systemPrompt as externalSystemPrompt } from './data/resumeContext';
 
-// --- CONFIGURATION ---
+// 2. GEMINI API KEY
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
 
-// --- DATA (ENHANCED FOR RAG) ---
+// 3. FIREBASE SETUP
+// Imports auth and db directly from your local firebase.js configuration
+import { auth, db } from './firebase'; 
+
+// 4. RESUME CONTEXT (THE BRAIN)
+// Imports the external system prompt for the AI persona
+import { systemPrompt as externalSystemPrompt } from './data/resumeContext';
+
+
+// --- DATA ---
 const PROJECT_ITEMS = [
-  { 
-    id: 1, 
-    title: "Connected Vehicle Architecture", 
-    category: "Future Tech", 
-    tags: ["vehicle", "ota", "architecture", "firmware", "iot", "cloud"],
-    image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1000&auto=format&fit=crop", 
-    description: "Architected the secure Over-The-Air (OTA) delivery framework supporting 1M+ connected vehicles." 
-  },
-  { 
-    id: 2, 
-    title: "Secure Financial Transformation", 
-    category: "Cybersecurity", 
-    tags: ["security", "finance", "cloud", "zero trust", "banking", "compliance"],
-    image: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1000&auto=format&fit=crop", 
-    description: "Directed the $70M+ services portfolio securing critical cloud workloads for top financial institutions." 
-  },
-  { 
-    id: 3, 
-    title: "Operational Intelligence (VMO)", 
-    category: "Operational Strategy", 
-    tags: ["operations", "strategy", "vmo", "efficiency", "data", "automation"],
-    image: "https://images.unsplash.com/photo-1518186285589-2f7649de83e0?q=80&w=1000&auto=format&fit=crop", 
-    description: "Built a Value Management Office (VMO) that leveraged data to save 2,300+ field hours globally." 
-  },
-  { 
-    id: 4, 
-    title: "Strategic Revenue Architecture", 
-    category: "Revenue Growth", 
-    tags: ["revenue", "growth", "incentives", "arr", "sales", "go-to-market"],
-    image: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=1000&auto=format&fit=crop", 
-    description: "Architected an incentive program turning a $70k investment into $12M+ in Annual Recurring Revenue." 
-  },
-  { 
-    id: 5, 
-    title: "Resilient Engineering Culture", 
-    category: "Organizational Strategy", 
-    tags: ["team", "culture", "leadership", "engineering", "post-mortem", "agile"],
-    image: "https://images.unsplash.com/photo-1544197150-b99a580bb7a8?q=80&w=1000&auto=format&fit=crop", 
-    description: "Established a Blameless Post-Mortem program for 500+ staff to drive continuous security improvements." 
-  },
-  { 
-    id: 6, 
-    title: "Global Investment Strategy", 
-    category: "Revenue Growth", 
-    tags: ["investment", "strategy", "global", "revenue", "scale"],
-    image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=1000&auto=format&fit=crop", 
-    description: "Led a global growth program converting a $1M investment into $28.8M in new annual recurring revenue." 
-  }
+  { id: 1, title: "Connected Vehicle Architecture", category: "Future Tech", tags: ["vehicle", "ota", "architecture", "firmware", "iot", "cloud"], image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1000&auto=format&fit=crop", description: "Architected the secure Over-The-Air (OTA) delivery framework supporting 1M+ connected vehicles." },
+  { id: 2, title: "Secure Financial Transformation", category: "Cybersecurity", tags: ["security", "finance", "cloud", "zero trust", "banking", "compliance"], image: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1000&auto=format&fit=crop", description: "Directed the $70M+ services portfolio securing critical cloud workloads for top financial institutions." },
+  { id: 3, title: "Operational Intelligence (VMO)", category: "Operational Strategy", tags: ["operations", "strategy", "vmo", "efficiency", "data", "automation"], image: "https://images.unsplash.com/photo-1518186285589-2f7649de83e0?q=80&w=1000&auto=format&fit=crop", description: "Built a Value Management Office (VMO) that leveraged data to save 2,300+ field hours globally." },
+  { id: 4, title: "Strategic Revenue Architecture", category: "Revenue Growth", tags: ["revenue", "growth", "incentives", "arr", "sales", "go-to-market"], image: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=1000&auto=format&fit=crop", description: "Architected an incentive program turning a $70k investment into $12M+ in Annual Recurring Revenue." },
+  { id: 5, title: "Resilient Engineering Culture", category: "Organizational Strategy", tags: ["team", "culture", "leadership", "engineering", "post-mortem", "agile"], image: "https://images.unsplash.com/photo-1544197150-b99a580bb7a8?q=80&w=1000&auto=format&fit=crop", description: "Established a Blameless Post-Mortem program for 500+ staff to drive continuous security improvements." },
+  { id: 6, title: "Global Investment Strategy", category: "Revenue Growth", tags: ["investment", "strategy", "global", "revenue", "scale"], image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=1000&auto=format&fit=crop", description: "Led a global growth program converting a $1M investment into $28.8M in new annual recurring revenue." }
 ];
 
 const EXPERTISE_AREAS = [
@@ -88,80 +47,82 @@ const BLOG_POSTS = [
 
 const NAV_LINKS = ["Home", "Projects", "Services", "Blog", "Contact"];
 
-// --- UTILITY: IMPROVED RAG RETRIEVAL ---
-// Scoring Logic: Title Match (10pts) > Tag Match (5pts) > Category Match (3pts) > Description Match (1pt)
-const getContextualData = (query: string) => {
+
+// --- UTILITY: RAG RETRIEVAL ---
+const getContextualData = (query) => {
     if (!query) return "";
     
     const lowerQuery = query.toLowerCase();
-    // Filter out very short words to reduce noise
-    const terms = lowerQuery.split(/\s+/).filter(w => w.length > 2);
+    // Split query into keywords (longer than 3 chars to avoid noise like "the", "and")
+    const keywords = lowerQuery.split(/\s+/).filter(w => w.length > 3);
+    
+    // Find relevant projects by tag matching
+    const relevantProjects = PROJECT_ITEMS.filter(project => 
+        keywords.some(keyword => 
+          project.tags.some(tag => tag.includes(keyword)) || 
+          project.title.toLowerCase().includes(keyword) ||
+          project.category.toLowerCase().includes(keyword)
+        )
+    );
 
-    // 1. Score the projects
-    const scoredProjects = PROJECT_ITEMS.map(project => {
-        let score = 0;
-        const projectString = JSON.stringify(project).toLowerCase();
+    if (relevantProjects.length === 0) {
+        return "";
+    }
 
-        terms.forEach(term => {
-            if (project.title.toLowerCase().includes(term)) score += 10;
-            if (project.tags.some(tag => tag.toLowerCase().includes(term))) score += 5;
-            if (project.category.toLowerCase().includes(term)) score += 3;
-            if (project.description.toLowerCase().includes(term)) score += 1;
-        });
-
-        return { ...project, score };
-    });
-
-    // 2. Filter & Sort
-    const relevantProjects = scoredProjects
-        .filter(p => p.score > 0)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 3); // Take top 3 most relevant
-
-    if (relevantProjects.length === 0) return "";
-
-    // 3. Format for LLM
-    return relevantProjects.map(p => 
-        `[PRIORITY CONTEXT: Relevance Score ${p.score}]\n` +
-        `Project: ${p.title}\n` +
-        `Category: ${p.category}\n` +
-        `Tags: ${p.tags.join(', ')}\n` +
-        `Details: ${p.description}\n`
-    ).join('\n---\n');
+    // Format the found projects into a string chunk for the AI
+    const projectContext = relevantProjects.map(p => 
+        `Project Title: ${p.title}\nCategory: ${p.category}\nDetails: ${p.description}\n`
+    ).join('---\n');
+    
+    return projectContext;
 };
 
 // --- UTILITY: LOGGING ---
-const logChatEntry = async (user: any, userInput: string, aiResponse: string) => {
-    if (!db) return;
+const logChatEntry = async (user, userInput, aiResponse) => {
+    if (!db) {
+        console.warn("Firestore not initialized. Cannot log chat entry.");
+        return;
+    }
+    
     const userId = auth?.currentUser?.uid || 'anonymous';
+    // Using a public path structure for simplicity in this demo.
+    
     try {
-        await addDoc(collection(db, 'chat_logs'), {
-            userId,
+        const chatCollection = collection(db, `chat_logs`);
+        
+        await addDoc(chatCollection, {
+            userId: userId,
             userQuery: userInput,
-            aiResponse,
+            aiResponse: aiResponse,
             timestamp: new Date(),
             model: 'gemini-2.5-flash',
-            context: 'RAG-Enhanced-Scored'
+            context: 'RAG-Lite'
         });
         console.log("📝 Chat entry logged to Firestore.");
     } catch (e) {
-        console.error("Logging failed", e);
+        console.error("Error logging chat entry:", e);
     }
 };
 
 // --- COMPONENTS ---
 
-const Login = ({ onOfflineLogin }: { onOfflineLogin?: () => void }) => {
+// 1. INLINED LOGIN COMPONENT (With Google Auth)
+const Login = ({ onOfflineLogin }) => {
   const handleLogin = async () => {
     if (!auth) {
+      console.warn("Auth not initialized. Check firebase configuration.");
+      // Fallback if auth is totally missing
       if (onOfflineLogin) onOfflineLogin();
       return;
     }
+
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
-    } catch (error: any) {
+    } catch (error) {
+      console.error("Login failed:", error);
       if (error.code === 'auth/popup-blocked' || error.code === 'auth/operation-not-supported-in-this-environment') {
+         // Fallback for restrictive environments
          await signInAnonymously(auth);
       } else {
          alert(`Authentication failed: ${error.message}`);
@@ -179,7 +140,10 @@ const Login = ({ onOfflineLogin }: { onOfflineLogin?: () => void }) => {
         <p className="text-neutral-400 mb-8">
           This area requires Director-level clearance. Please authenticate to continue.
         </p>
-        <button onClick={handleLogin} className="w-full bg-white text-neutral-950 font-bold py-3 px-6 rounded-lg hover:bg-neutral-200 transition-colors flex items-center justify-center gap-2">
+        <button 
+          onClick={handleLogin}
+          className="w-full bg-white text-neutral-950 font-bold py-3 px-6 rounded-lg hover:bg-neutral-200 transition-colors flex items-center justify-center gap-2"
+        >
           <svg className="w-5 h-5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
             <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
@@ -194,19 +158,19 @@ const Login = ({ onOfflineLogin }: { onOfflineLogin?: () => void }) => {
 };
 
 // 2. CHAT INTERFACE
-const ChatInterface = ({ user }: { user: any }) => {
+const ChatInterface = ({ user }) => {
   const [messages, setMessages] = useState([
     { role: 'assistant', text: `Identity confirmed: ${user?.email || 'Director'}. Accessing neural archives... Hello. I am Raphael's digital twin. Ask me about his architecture philosophy, leadership style, or technical experience.` }
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSendMessage = async (e: React.FormEvent) => {
+  const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!inputValue.trim()) return;
 
@@ -216,7 +180,11 @@ const ChatInterface = ({ user }: { user: any }) => {
     setInputValue("");
     setIsTyping(true);
 
-    if (!GEMINI_API_KEY) {
+    
+    // Standard Gemini API Key from environment
+    const apiKey = GEMINI_API_KEY;
+
+    if (!apiKey) {
       setTimeout(() => {
         setMessages(prev => [...prev, { 
           role: 'assistant', 
@@ -228,24 +196,19 @@ const ChatInterface = ({ user }: { user: any }) => {
     }
 
     const targetModel = "gemini-2.5-flash";
-    const contextualData = getContextualData(userInput);
     
-    // --- 🕵️‍♂️ START DEBUG BLOCK ---
-    console.log("%c 🕵️‍♂️ RAG DEBUGGER ", "background: #222; color: #bada55; font-weight: bold; padding: 4px;");
-    console.log("User Question:", userInput);
-    if (contextualData) {
-      console.log("%c ✅ CONTEXT FOUND! ", "background: green; color: white; font-weight: bold;");
-      console.log("Injecting:", contextualData);
-    } else {
-      console.log("%c ❌ NO CONTEXT MATCH ", "background: red; color: white; font-weight: bold;");
-      console.log("Using standard persona only.");
-    }
-    console.log("-----------------------------------------");
-    // --- 🕵️‍♂️ END DEBUG BLOCK ---
+    // 1. RETRIEVAL: Pull context based on the current user input
+    const contextualData = getContextualData(userInput);
 
+    // 2. AUGMENTATION: Build the final prompt by combining the persona and the relevant data
+    // Use externalSystemPrompt (imported from data file)
+    const baseContext = typeof externalSystemPrompt !== 'undefined' ? externalSystemPrompt : "You are a helpful assistant.";
+    
     const finalSystemPrompt = contextualData 
-        ? `${externalSystemPrompt}\n\n[SYSTEM INJECTION: RELEVANT DATA FOUND]\nUse the following specific project details to answer the user's question:\n${contextualData}` 
-        : externalSystemPrompt;
+        ? `${baseContext}\n\n[SYSTEM INJECTION: RELEVANT DATA FOUND]\nUse the following specific project details to answer the user's question:\n${contextualData}` 
+        : baseContext; // Fallback to generic persona if no specific keywords match
+
+    let aiResponse = "I'm having trouble connecting right now.";
 
     try {
       const historyForApi = newMessages.map(msg => ({
@@ -253,12 +216,12 @@ const ChatInterface = ({ user }: { user: any }) => {
         parts: [{ text: msg.text }]
       }));
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${GEMINI_API_KEY}`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [
-            { role: 'user', parts: [{ text: finalSystemPrompt }] }, 
+            { role: 'user', parts: [{ text: finalSystemPrompt }] }, // Use the RAG prompt
             ...historyForApi 
           ]
         })
@@ -267,17 +230,17 @@ const ChatInterface = ({ user }: { user: any }) => {
       const data = await response.json();
       if (data.error) throw new Error(data.error.message);
 
-      const botResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "I'm having trouble connecting right now.";
-      setMessages(prev => [...prev, { role: 'assistant', text: botResponse }]);
-      
-      // Log successful interactions
-      await logChatEntry(user, userInput, botResponse); 
+      aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || aiResponse;
+      setMessages(prev => [...prev, { role: 'assistant', text: aiResponse }]);
 
-    } catch (error: any) {
+    } catch (error) {
       console.error("Gemini API Error:", error);
       setMessages(prev => [...prev, { role: 'assistant', text: `Connection Error: ${error.message}` }]);
+      aiResponse = `Gemini connection failed: ${error.message}`;
     } finally {
       setIsTyping(false);
+      // LOG THE CHAT ENTRY
+      await logChatEntry(user, userInput, aiResponse); 
     }
   };
 
@@ -294,7 +257,7 @@ const ChatInterface = ({ user }: { user: any }) => {
         {messages.map((msg, idx) => (
           <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[80%] p-4 rounded-lg ${msg.role === 'user' ? 'bg-rose-600 text-white' : 'bg-neutral-950 border border-neutral-800 text-neutral-300'}`}>
-              <span className="block text-xs opacity-50 mb-1 font-bold uppercase tracking-wider">{msg.role === 'user' ? 'You' : 'Raphael AI'}</span>
+              <span className="block text-xs opacity-50 mb-1 mb-2 font-bold uppercase tracking-wider">{msg.role === 'user' ? 'You' : 'Raphael AI'}</span>
               <p className="leading-relaxed whitespace-pre-wrap">{msg.text}</p>
             </div>
           </div>
@@ -324,7 +287,7 @@ const App = () => {
   const [activeCategory, setActiveCategory] = useState("All");
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState(null);
   const [showChat, setShowChat] = useState(false);
 
   const categories = ["All", ...new Set(PROJECT_ITEMS.map(item => item.category))];
@@ -346,7 +309,7 @@ const App = () => {
     }
   }, []);
 
-  const scrollToSection = (id: string) => {
+  const scrollToSection = (id) => {
     setShowChat(false);
     const element = document.getElementById(id);
     if (element) {
