@@ -22,9 +22,9 @@ import { getFirestore, collection, addDoc } from 'firebase/firestore';
 // Placeholders so the preview doesn't crash
 //const headshot = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?fit=crop&w=800&q=80";
 //const bostonSkyline = "https://images.unsplash.com/photo-1506191845112-c72635417cb3?fit=crop&w=1920&q=80";
-let localAuth = null;
-let localDb = null;
-const PREVIEW_API_KEY = ""; // Empty key for preview
+//let localAuth = null;
+//let localDb = null;
+//const PREVIEW_API_KEY = ""; // Empty key for preview
 
 // Inline Brain Data for Preview (Fallback for RAG)
 const INLINE_SYSTEM_PROMPT = `
