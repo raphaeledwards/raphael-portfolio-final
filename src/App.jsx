@@ -1,64 +1,25 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Terminal, ChevronRight, Users, Lock, Cloud, BrainCircuit, MapPin, Linkedin, Globe, Mail, Menu, X as CloseIcon, MessageSquare, Send } from 'lucide-react';
-import { initializeApp } from 'firebase/app';
-import { getAuth, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { getFirestore, collection, addDoc } from 'firebase/firestore';
+import { 
+  getAuth, 
+  onAuthStateChanged, 
+  signOut, 
+  signInAnonymously, 
+  signInWithCustomToken, 
+  GoogleAuthProvider, 
+  signInWithPopup 
+} from 'firebase/auth';
+import { collection, addDoc } from 'firebase/firestore';
 
-// --- CONFIGURATION ---
-
-// 1. ASSETS
-// [LOCAL USE]: Uncomment imports, comment out consts
+// --- LOCAL IMPORTS ---
+// Ensure these files exist in your local project structure
 import headshot from './assets/headshot.jpg';
 import bostonSkyline from './assets/boston-skyline.jpg';
-
-// [PREVIEW USE]:
-// const headshot = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?fit=crop&w=800&q=80";
-// const bostonSkyline = "https://images.unsplash.com/photo-1506191845112-c72635417cb3?fit=crop&w=1920&q=80";
-
-// 2. GEMINI API KEY
-// [LOCAL USE]: Uncomment import
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
-
-// [PREVIEW USE]:
-// const GEMINI_API_KEY = "";
-
-// 3. FIREBASE SETUP
-// [LOCAL USE]: Import auth AND db
 import { auth, db } from './firebase'; 
-
-// [PREVIEW USE]:
-let localAuth = null;
-let localDb = null;
-try { 
-  if (typeof auth !== 'undefined') localAuth = auth; 
-  if (typeof db !== 'undefined') localDb = db;
-} catch (e) {}
-
-let appAuth = localAuth;
-let appDb = localDb;
-
-try {
-  if (typeof __firebase_config !== 'undefined') {
-    const firebaseConfig = JSON.parse(__firebase_config);
-    const app = initializeApp(firebaseConfig);
-    appAuth = getAuth(app);
-    appDb = getFirestore(app);
-  } else if (!appAuth) {
-    console.warn("⚠️ Local Mode: Firebase Auth not initialized.");
-  }
-} catch (error) {
-  console.error("Firebase initialization warning:", error);
-}
-
-// 4. RESUME CONTEXT (THE BRAIN)
-// [LOCAL USE]: Import the external brain
 import { systemPrompt as externalSystemPrompt } from './data/resumeContext';
 
-// [PREVIEW USE]: Inline fallback
-const SAFE_SYSTEM_PROMPT = typeof externalSystemPrompt !== 'undefined' 
-  ? externalSystemPrompt 
-  : "You are the AI Digital Twin of Raphael J. Edwards.";
-
+// --- CONFIGURATION ---
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
 
 // --- DATA (ENHANCED FOR RAG) ---
 const PROJECT_ITEMS = [
@@ -66,7 +27,7 @@ const PROJECT_ITEMS = [
     id: 1, 
     title: "Connected Vehicle Architecture", 
     category: "Future Tech", 
-    tags: ["vehicle", "ota", "architecture", "firmware", "iot", "cloud"], // <--- TAGS ADDED
+    tags: ["vehicle", "ota", "architecture", "firmware", "iot", "cloud"],
     image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1000&auto=format&fit=crop", 
     description: "Architected the secure Over-The-Air (OTA) delivery framework supporting 1M+ connected vehicles." 
   },
@@ -127,41 +88,60 @@ const BLOG_POSTS = [
 
 const NAV_LINKS = ["Home", "Projects", "Services", "Blog", "Contact"];
 
-// --- UTILITY: RAG RETRIEVAL (Logic to find projects) ---
-const getContextualData = (query) => {
+// --- UTILITY: IMPROVED RAG RETRIEVAL ---
+// Scoring Logic: Title Match (10pts) > Tag Match (5pts) > Category Match (3pts) > Description Match (1pt)
+const getContextualData = (query: string) => {
     if (!query) return "";
     
     const lowerQuery = query.toLowerCase();
-    const keywords = lowerQuery.split(/\s+/).filter(w => w.length > 3);
-    
-    // Find relevant projects by tag matching
-    const relevantProjects = PROJECT_ITEMS.filter(project => 
-        keywords.some(keyword => 
-          project.tags.some(tag => tag.includes(keyword)) || 
-          project.title.toLowerCase().includes(keyword) ||
-          project.category.toLowerCase().includes(keyword)
-        )
-    );
+    // Filter out very short words to reduce noise
+    const terms = lowerQuery.split(/\s+/).filter(w => w.length > 2);
+
+    // 1. Score the projects
+    const scoredProjects = PROJECT_ITEMS.map(project => {
+        let score = 0;
+        const projectString = JSON.stringify(project).toLowerCase();
+
+        terms.forEach(term => {
+            if (project.title.toLowerCase().includes(term)) score += 10;
+            if (project.tags.some(tag => tag.toLowerCase().includes(term))) score += 5;
+            if (project.category.toLowerCase().includes(term)) score += 3;
+            if (project.description.toLowerCase().includes(term)) score += 1;
+        });
+
+        return { ...project, score };
+    });
+
+    // 2. Filter & Sort
+    const relevantProjects = scoredProjects
+        .filter(p => p.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 3); // Take top 3 most relevant
 
     if (relevantProjects.length === 0) return "";
 
+    // 3. Format for LLM
     return relevantProjects.map(p => 
-        `Project Title: ${p.title}\nCategory: ${p.category}\nDetails: ${p.description}\n`
-    ).join('---\n');
+        `[PRIORITY CONTEXT: Relevance Score ${p.score}]\n` +
+        `Project: ${p.title}\n` +
+        `Category: ${p.category}\n` +
+        `Tags: ${p.tags.join(', ')}\n` +
+        `Details: ${p.description}\n`
+    ).join('\n---\n');
 };
 
-// --- UTILITY: LOGGING (Save to Firebase) ---
-const logChatEntry = async (user, userInput, aiResponse) => {
-    if (!appDb) return;
-    const userId = appAuth?.currentUser?.uid || 'anonymous';
+// --- UTILITY: LOGGING ---
+const logChatEntry = async (user: any, userInput: string, aiResponse: string) => {
+    if (!db) return;
+    const userId = auth?.currentUser?.uid || 'anonymous';
     try {
-        await addDoc(collection(appDb, 'chat_logs'), {
+        await addDoc(collection(db, 'chat_logs'), {
             userId,
             userQuery: userInput,
             aiResponse,
             timestamp: new Date(),
             model: 'gemini-2.5-flash',
-            context: 'RAG-Lite'
+            context: 'RAG-Enhanced-Scored'
         });
         console.log("📝 Chat entry logged to Firestore.");
     } catch (e) {
@@ -171,18 +151,18 @@ const logChatEntry = async (user, userInput, aiResponse) => {
 
 // --- COMPONENTS ---
 
-const Login = ({ onOfflineLogin }) => {
+const Login = ({ onOfflineLogin }: { onOfflineLogin?: () => void }) => {
   const handleLogin = async () => {
-    if (!appAuth) {
+    if (!auth) {
       if (onOfflineLogin) onOfflineLogin();
       return;
     }
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(appAuth, provider);
-    } catch (error) {
+      await signInWithPopup(auth, provider);
+    } catch (error: any) {
       if (error.code === 'auth/popup-blocked' || error.code === 'auth/operation-not-supported-in-this-environment') {
-         await signInAnonymously(appAuth);
+         await signInAnonymously(auth);
       } else {
          alert(`Authentication failed: ${error.message}`);
       }
@@ -214,19 +194,19 @@ const Login = ({ onOfflineLogin }) => {
 };
 
 // 2. CHAT INTERFACE
-const ChatInterface = ({ user }) => {
+const ChatInterface = ({ user }: { user: any }) => {
   const [messages, setMessages] = useState([
     { role: 'assistant', text: `Identity confirmed: ${user?.email || 'Director'}. Accessing neural archives... Hello. I am Raphael's digital twin. Ask me about his architecture philosophy, leadership style, or technical experience.` }
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const messagesEndRef = useRef(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSendMessage = async (e) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim()) return;
 
@@ -263,11 +243,9 @@ const ChatInterface = ({ user }) => {
     console.log("-----------------------------------------");
     // --- 🕵️‍♂️ END DEBUG BLOCK ---
 
-    const baseContext = typeof externalSystemPrompt !== 'undefined' ? externalSystemPrompt : SAFE_SYSTEM_PROMPT;
-
     const finalSystemPrompt = contextualData 
-        ? `${baseContext}\n\n[SYSTEM INJECTION: RELEVANT DATA FOUND]\nUse the following specific project details to answer the user's question:\n${contextualData}` 
-        : baseContext;
+        ? `${externalSystemPrompt}\n\n[SYSTEM INJECTION: RELEVANT DATA FOUND]\nUse the following specific project details to answer the user's question:\n${contextualData}` 
+        : externalSystemPrompt;
 
     try {
       const historyForApi = newMessages.map(msg => ({
@@ -295,7 +273,7 @@ const ChatInterface = ({ user }) => {
       // Log successful interactions
       await logChatEntry(user, userInput, botResponse); 
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Gemini API Error:", error);
       setMessages(prev => [...prev, { role: 'assistant', text: `Connection Error: ${error.message}` }]);
     } finally {
@@ -316,7 +294,7 @@ const ChatInterface = ({ user }) => {
         {messages.map((msg, idx) => (
           <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[80%] p-4 rounded-lg ${msg.role === 'user' ? 'bg-rose-600 text-white' : 'bg-neutral-950 border border-neutral-800 text-neutral-300'}`}>
-              <span className="block text-xs opacity-50 mb-1 mb-2 font-bold uppercase tracking-wider">{msg.role === 'user' ? 'You' : 'Raphael AI'}</span>
+              <span className="block text-xs opacity-50 mb-1 font-bold uppercase tracking-wider">{msg.role === 'user' ? 'You' : 'Raphael AI'}</span>
               <p className="leading-relaxed whitespace-pre-wrap">{msg.text}</p>
             </div>
           </div>
@@ -346,7 +324,7 @@ const App = () => {
   const [activeCategory, setActiveCategory] = useState("All");
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<any>(null);
   const [showChat, setShowChat] = useState(false);
 
   const categories = ["All", ...new Set(PROJECT_ITEMS.map(item => item.category))];
@@ -357,14 +335,8 @@ const App = () => {
     window.addEventListener('scroll', handleScroll);
     
     // Auth Listener
-    if (appAuth) {
-      const initAuth = async () => {
-          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-              try { await signInWithCustomToken(appAuth, __initial_auth_token); } catch (e) { console.error(e); }
-          }
-      };
-      initAuth();
-      const unsubscribe = onAuthStateChanged(appAuth, setUser);
+    if (auth) {
+      const unsubscribe = onAuthStateChanged(auth, setUser);
       return () => {
         window.removeEventListener('scroll', handleScroll);
         unsubscribe();
@@ -374,7 +346,7 @@ const App = () => {
     }
   }, []);
 
-  const scrollToSection = (id) => {
+  const scrollToSection = (id: string) => {
     setShowChat(false);
     const element = document.getElementById(id);
     if (element) {
@@ -385,7 +357,7 @@ const App = () => {
 
   const handleLogout = async () => {
     try {
-      if (appAuth) await signOut(appAuth);
+      if (auth) await signOut(auth);
       else setUser(null);
     } catch (error) {
       console.error("Logout failed", error);
