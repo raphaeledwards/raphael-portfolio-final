@@ -21,11 +21,15 @@ import { getFirestore, collection, addDoc } from 'firebase/firestore';
 
 //const headshot = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?fit=crop&w=800&q=80";
 //const bostonSkyline = "https://images.unsplash.com/photo-1506191845112-c72635417cb3?fit=crop&w=1920&q=80";
-let localAuth = null;
-let localDb = null;
-const PREVIEW_API_KEY = ""; 
+//let localAuth = null;
+//let localDb = null;
+//const PREVIEW_API_KEY = ""; 
 
 // Fallback Brain (Used if external file isn't imported)
+//const INLINE_SYSTEM_PROMPT = `
+//You are the AI Digital Twin of Raphael J. Edwards. 
+//You are a Technology Executive & Services Architect.
+//Answer questions based on the context provided.
 ;
 
 // --- FIREBASE SETUP ---
@@ -238,6 +242,17 @@ const ChatInterface = ({ user }) => {
     // --- RAG LOGIC ---
     const targetModel = "gemini-2.5-flash";
     const contextualData = getContextualData(userInput);
+    
+    // --- DEBUG LOG: SEE IF RAG IS WORKING ---
+    console.log("-----------------------------------------");
+    console.log("🕵️‍♂️ RAG Debugger");
+    console.log("User Input:", userInput);
+    if (contextualData) {
+      console.log("✅ MATCH FOUND! Injecting context:", contextualData);
+    } else {
+      console.log("❌ No specific tags found. Using base persona.");
+    }
+    console.log("-----------------------------------------");
     
     // Fallback logic for System Prompt
     const baseContext = typeof externalSystemPrompt !== 'undefined' ? externalSystemPrompt : INLINE_SYSTEM_PROMPT;
