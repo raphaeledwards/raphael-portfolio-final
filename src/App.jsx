@@ -4,46 +4,25 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { getFirestore, collection, addDoc } from 'firebase/firestore';
 
-// ==========================================
-// 1. LOCAL SETUP (Uncomment these locally)
-// ==========================================
+// --- PRODUCTION CONFIGURATION ---
 
- import headshot from './assets/headshot.jpg';
- import bostonSkyline from './assets/boston-skyline.jpg';
- import { auth, db } from './firebase'; 
- import { systemPrompt as externalSystemPrompt } from './data/resumeContext';
- const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+// 1. ASSETS
+import headshot from './assets/headshot.jpg';
+import bostonSkyline from './assets/boston-skyline.jpg';
+
+// 2. GEMINI API KEY
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+
+// 3. FIREBASE SETUP
+// Imports auth and db directly from your local firebase.js configuration
+import { auth, db } from './firebase'; 
+
+// 4. RESUME CONTEXT (THE BRAIN)
+// Imports the external system prompt for the AI persona
+import { systemPrompt as externalSystemPrompt } from './data/resumeContext';
 
 
-// ==========================================
-// 2. PREVIEW SETUP (Ignore locally)
-// ==========================================
-
-// Placeholders (Using same variable names as local imports for consistency)
-//const headshot = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?fit=crop&w=800&q=80";
-//const bostonSkyline = "https://images.unsplash.com/photo-1506191845112-c72635417cb3?fit=crop&w=1920&q=80";
-//const PREVIEW_API_KEY = ""; // Empty key for preview
-
-// Inline Brain Data for Preview (Fallback for RAG)
-//const INLINE_SYSTEM_PROMPT = `
-;
-
-// --- FIREBASE SETUP ---
-let appAuth = localAuth; 
-let appDb = localDb;
-
-try {
-  if (typeof __firebase_config !== 'undefined') {
-    const firebaseConfig = JSON.parse(__firebase_config);
-    const app = initializeApp(firebaseConfig);
-    appAuth = getAuth(app);
-    appDb = getFirestore(app);
-  }
-} catch (error) {
-  console.error("Firebase initialization failed:", error);
-}
-
-// --- MOCK DATA ---
+// --- DATA ---
 const PROJECT_ITEMS = [
   { id: 1, title: "Connected Vehicle Architecture", category: "Future Tech", tags: ["vehicle", "ota", "architecture", "firmware", "iot", "cloud"], image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1000&auto=format&fit=crop", description: "Architected the secure Over-The-Air (OTA) delivery framework supporting 1M+ connected vehicles." },
   { id: 2, title: "Secure Financial Transformation", category: "Cybersecurity", tags: ["security", "finance", "cloud", "zero trust", "banking", "compliance"], image: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1000&auto=format&fit=crop", description: "Directed the $70M+ services portfolio securing critical cloud workloads for top financial institutions." },
@@ -68,11 +47,13 @@ const BLOG_POSTS = [
 
 const NAV_LINKS = ["Home", "Projects", "Services", "Blog", "Contact"];
 
+
 // --- UTILITY: RAG RETRIEVAL ---
 const getContextualData = (query) => {
     if (!query) return "";
     
     const lowerQuery = query.toLowerCase();
+    // Split query into keywords (longer than 3 chars to avoid noise like "the", "and")
     const keywords = lowerQuery.split(/\s+/).filter(w => w.length > 3);
     
     // Find relevant projects by tag matching
@@ -84,22 +65,35 @@ const getContextualData = (query) => {
         )
     );
 
-    if (relevantProjects.length === 0) return "";
+    if (relevantProjects.length === 0) {
+        return "";
+    }
 
-    return relevantProjects.map(p => 
+    // Format the found projects into a string chunk for the AI
+    const projectContext = relevantProjects.map(p => 
         `Project Title: ${p.title}\nCategory: ${p.category}\nDetails: ${p.description}\n`
     ).join('---\n');
+    
+    return projectContext;
 };
 
 // --- UTILITY: LOGGING ---
 const logChatEntry = async (user, userInput, aiResponse) => {
-    if (!appDb) return;
-    const userId = appAuth?.currentUser?.uid || 'anonymous';
+    if (!db) {
+        console.warn("Firestore not initialized. Cannot log chat entry.");
+        return;
+    }
+    
+    const userId = auth?.currentUser?.uid || 'anonymous';
+    // Using a public path structure for simplicity in this demo.
+    
     try {
-        await addDoc(collection(appDb, 'chat_logs'), {
-            userId,
+        const chatCollection = collection(db, `chat_logs`);
+        
+        await addDoc(chatCollection, {
+            userId: userId,
             userQuery: userInput,
-            aiResponse,
+            aiResponse: aiResponse,
             timestamp: new Date(),
             model: 'gemini-2.5-flash',
             context: 'RAG-Lite'
@@ -112,21 +106,24 @@ const logChatEntry = async (user, userInput, aiResponse) => {
 
 // --- COMPONENTS ---
 
+// 1. INLINED LOGIN COMPONENT (With Google Auth)
 const Login = ({ onOfflineLogin }) => {
   const handleLogin = async () => {
-    if (!appAuth) {
+    if (!auth) {
       console.warn("Auth not initialized. Check firebase configuration.");
+      // Fallback if auth is totally missing
       if (onOfflineLogin) onOfflineLogin();
       return;
     }
 
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(appAuth, provider);
+      await signInWithPopup(auth, provider);
     } catch (error) {
       console.error("Login failed:", error);
       if (error.code === 'auth/popup-blocked' || error.code === 'auth/operation-not-supported-in-this-environment') {
-         await signInAnonymously(appAuth);
+         // Fallback for restrictive environments
+         await signInAnonymously(auth);
       } else {
          alert(`Authentication failed: ${error.message}`);
       }
@@ -183,17 +180,34 @@ const ChatInterface = ({ user }) => {
     setInputValue("");
     setIsTyping(true);
 
+    // Standard Gemini API Key from environment
+    const apiKey = GEMINI_API_KEY;
+
+    if (!apiKey) {
+      setTimeout(() => {
+        setMessages(prev => [...prev, { 
+          role: 'assistant', 
+          text: "⚠️ MISSING API KEY: Please set `VITE_GEMINI_API_KEY` in your environment variables." 
+        }]);
+        setIsTyping(false);
+      }, 500);
+      return;
     }
 
     const targetModel = "gemini-2.5-flash";
-    const contextualData = getContextualData(userInput);
     
-    // RAG Logic: Use external prompt if available, otherwise inline fallback
-    const baseContext = typeof externalSystemPrompt !== 'undefined' ? externalSystemPrompt : INLINE_SYSTEM_PROMPT;
+    // 1. RETRIEVAL: Pull context based on the current user input
+    const contextualData = getContextualData(userInput);
 
+    // 2. AUGMENTATION: Build the final prompt by combining the persona and the relevant data
+    // Use externalSystemPrompt (imported from data file)
+    const baseContext = typeof externalSystemPrompt !== 'undefined' ? externalSystemPrompt : "You are a helpful assistant.";
+    
     const finalSystemPrompt = contextualData 
         ? `${baseContext}\n\n[SYSTEM INJECTION: RELEVANT DATA FOUND]\nUse the following specific project details to answer the user's question:\n${contextualData}` 
-        : baseContext;
+        : baseContext; // Fallback to generic persona if no specific keywords match
+
+    let aiResponse = "I'm having trouble connecting right now.";
 
     try {
       const historyForApi = newMessages.map(msg => ({
@@ -206,7 +220,7 @@ const ChatInterface = ({ user }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [
-            { role: 'user', parts: [{ text: finalSystemPrompt }] }, 
+            { role: 'user', parts: [{ text: finalSystemPrompt }] }, // Use the RAG prompt
             ...historyForApi 
           ]
         })
@@ -215,17 +229,17 @@ const ChatInterface = ({ user }) => {
       const data = await response.json();
       if (data.error) throw new Error(data.error.message);
 
-      const botResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "I'm having trouble connecting right now.";
-      setMessages(prev => [...prev, { role: 'assistant', text: botResponse }]);
-      
-      // Log successful interactions
-      await logChatEntry(user, userInput, botResponse); 
+      aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || aiResponse;
+      setMessages(prev => [...prev, { role: 'assistant', text: aiResponse }]);
 
     } catch (error) {
       console.error("Gemini API Error:", error);
       setMessages(prev => [...prev, { role: 'assistant', text: `Connection Error: ${error.message}` }]);
+      aiResponse = `Gemini connection failed: ${error.message}`;
     } finally {
       setIsTyping(false);
+      // LOG THE CHAT ENTRY
+      await logChatEntry(user, userInput, aiResponse); 
     }
   };
 
@@ -283,14 +297,8 @@ const App = () => {
     window.addEventListener('scroll', handleScroll);
     
     // Auth Listener
-    if (appAuth) {
-      const initAuth = async () => {
-          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-              try { await signInWithCustomToken(appAuth, __initial_auth_token); } catch (e) { console.error(e); }
-          }
-      };
-      initAuth();
-      const unsubscribe = onAuthStateChanged(appAuth, setUser);
+    if (auth) {
+      const unsubscribe = onAuthStateChanged(auth, setUser);
       return () => {
         window.removeEventListener('scroll', handleScroll);
         unsubscribe();
@@ -311,7 +319,7 @@ const App = () => {
 
   const handleLogout = async () => {
     try {
-      if (appAuth) await signOut(appAuth);
+      if (auth) await signOut(auth);
       else setUser(null);
     } catch (error) {
       console.error("Logout failed", error);
@@ -337,8 +345,7 @@ const App = () => {
           </div>
         </nav>
         <div className="flex-1 flex items-center justify-center p-4">
-          {/* LOCAL: Replace <PreviewLogin ... /> with your local <Login /> */}
-          {!user ? <PreviewLogin onOfflineLogin={handleOfflineLogin} /> : <div className="w-full max-w-6xl mx-auto"><ChatInterface user={user} /></div>}
+          {!user ? <Login onOfflineLogin={handleOfflineLogin} /> : <div className="w-full max-w-6xl mx-auto"><ChatInterface user={user} /></div>}
         </div>
       </div>
     );
