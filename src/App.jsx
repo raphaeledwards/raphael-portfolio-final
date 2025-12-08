@@ -40,22 +40,6 @@ You are a Technology Executive & Services Architect based in Boston.
 * If specific project data is injected via RAG, use it to answer the question.
 `;
 
-// Temporary inline Login for preview only (Delete this locally)
-const PreviewLogin = ({ onOfflineLogin }) => (
-  <div className="flex flex-col items-center justify-center min-h-[50vh] p-4 bg-neutral-950 text-white font-sans animate-in fade-in zoom-in-95 duration-300">
-    <div className="bg-neutral-900 border border-neutral-800 p-8 rounded-2xl text-center max-w-md w-full shadow-2xl">
-      <div className="bg-neutral-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
-        <Lock className="w-8 h-8 text-rose-500" />
-      </div>
-      <h2 className="text-2xl font-bold text-white mb-2">Restricted Access (Preview)</h2>
-      <p className="text-neutral-400 mb-8">This is a preview. Locally, this will use Google Auth.</p>
-      <button onClick={onOfflineLogin} className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 px-6 rounded-md transition-colors flex items-center justify-center gap-2">
-        <Terminal size={18} /> Enter Demo Mode
-      </button>
-    </div>
-  </div>
-);
-
 // --- FIREBASE SETUP ---
 let appAuth = localAuth; 
 let appDb = localDb;
