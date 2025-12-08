@@ -180,6 +180,41 @@ const ChatInterface = ({ user }) => {
     setInputValue("");
     setIsTyping(true);
 
+    
+// ... inside handleSendMessage ...
+
+    const targetModel = "gemini-2.5-flash";
+    const contextualData = getContextualData(userInput);
+    
+    // --- 🕵️‍♂️ START DEBUG BLOCK ---
+    console.log("%c 🕵️‍♂️ RAG DEBUGGER ", "background: #222; color: #bada55; font-weight: bold; padding: 4px;");
+    console.log("User Question:", userInput);
+    if (contextualData) {
+      console.log("%c ✅ CONTEXT FOUND! ", "background: green; color: white; font-weight: bold;");
+      console.log("Injecting the following data into the Brain:", contextualData);
+    } else {
+      console.log("%c ❌ NO CONTEXT MATCH ", "background: red; color: white; font-weight: bold;");
+      console.log("Using standard persona only.");
+    }
+    console.log("-----------------------------------------");
+    // --- 🕵️‍♂️ END DEBUG BLOCK ---
+    
+    // Fallback logic for System Prompt
+    const baseContext = typeof externalSystemPrompt !== 'undefined' ? externalSystemPrompt : SAFE_SYSTEM_PROMPT;
+
+// ... continue with the rest of the function
+
+
+
+
+
+
+
+
+
+
+
+
     // Standard Gemini API Key from environment
     const apiKey = GEMINI_API_KEY;
 
