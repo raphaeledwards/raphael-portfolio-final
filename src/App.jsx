@@ -15,7 +15,7 @@ const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
 
 // 3. FIREBASE SETUP
 // Imports auth and db directly from your local firebase.js configuration
-import { auth, db } from './firebase'; 
+import { auth, db } from './firebase';
 
 // 4. RESUME CONTEXT (THE BRAIN)
 // Imports the external system prompt for the AI persona
@@ -50,58 +50,94 @@ const NAV_LINKS = ["Home", "Projects", "Services", "Blog", "Contact"];
 
 // --- UTILITY: RAG RETRIEVAL ---
 const getContextualData = (query) => {
-    if (!query) return "";
-    
-    const lowerQuery = query.toLowerCase();
-    // Split query into keywords (longer than 3 chars to avoid noise like "the", "and")
-    const keywords = lowerQuery.split(/\s+/).filter(w => w.length > 3);
-    
-    // Find relevant projects by tag matching
-    const relevantProjects = PROJECT_ITEMS.filter(project => 
-        keywords.some(keyword => 
-          project.tags.some(tag => tag.includes(keyword)) || 
-          project.title.toLowerCase().includes(keyword) ||
-          project.category.toLowerCase().includes(keyword)
-        )
-    );
+  if (!query) return "";
 
-    if (relevantProjects.length === 0) {
-        return "";
-    }
+  const lowerQuery = query.toLowerCase();
+  const keywords = lowerQuery.split(/\s+/).filter(w => w.length > 2); // Reduced threshold to 2 chars
 
-    // Format the found projects into a string chunk for the AI
-    const projectContext = relevantProjects.map(p => 
-        `Project Title: ${p.title}\nCategory: ${p.category}\nDetails: ${p.description}\n`
-    ).join('---\n');
-    
-    return projectContext;
+  // Scoring Helper
+  const calculateScore = (item, type) => {
+    let score = 0;
+    const stringifiedItem = JSON.stringify(item).toLowerCase();
+
+    keywords.forEach(keyword => {
+      // Title matches are high value
+      if (item.title?.toLowerCase().includes(keyword)) score += 10;
+
+      // Category/Tag matches
+      if (item.category?.toLowerCase().includes(keyword)) score += 5;
+      if (item.tags?.some(tag => tag.toLowerCase().includes(keyword))) score += 5;
+
+      // General content match (low value)
+      if (stringifiedItem.includes(keyword)) score += 1;
+    });
+
+    return score;
+  };
+
+  // 1. Search Projects
+  const projectMatches = PROJECT_ITEMS.map(item => ({
+    type: 'PROJECT',
+    data: item,
+    score: calculateScore(item, 'PROJECT')
+  })).filter(match => match.score > 0);
+
+  // 2. Search Expertise
+  const expertiseMatches = EXPERTISE_AREAS.map(item => ({
+    type: 'EXPERTISE',
+    data: item,
+    score: calculateScore(item, 'EXPERTISE')
+  })).filter(match => match.score > 0);
+
+  // 3. Search Blogs
+  const blogMatches = BLOG_POSTS.map(item => ({
+    type: 'BLOG',
+    data: item,
+    score: calculateScore(item, 'BLOG')
+  })).filter(match => match.score > 0);
+
+  // Combine and Sort
+  const allMatches = [...projectMatches, ...expertiseMatches, ...blogMatches]
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5); // Take top 5 most relevant chunks
+
+  if (allMatches.length === 0) return "";
+
+  // Format for LLM
+  return allMatches.map(match => {
+    const { type, data } = match;
+    if (type === 'PROJECT') return `[PROJECT] ${data.title} (${data.category}): ${data.description}`;
+    if (type === 'EXPERTISE') return `[EXPERTISE] ${data.title}: ${data.description}`;
+    if (type === 'BLOG') return `[BLOG] ${data.title} (${data.date}): ${data.excerpt}`;
+    return "";
+  }).join('\n---\n');
 };
 
 // --- UTILITY: LOGGING ---
 const logChatEntry = async (user, userInput, aiResponse) => {
-    if (!db) {
-        console.warn("Firestore not initialized. Cannot log chat entry.");
-        return;
-    }
-    
-    const userId = auth?.currentUser?.uid || 'anonymous';
-    // Using a public path structure for simplicity in this demo.
-    
-    try {
-        const chatCollection = collection(db, `chat_logs`);
-        
-        await addDoc(chatCollection, {
-            userId: userId,
-            userQuery: userInput,
-            aiResponse: aiResponse,
-            timestamp: new Date(),
-            model: 'gemini-2.5-flash',
-            context: 'RAG-Lite'
-        });
-        console.log("📝 Chat entry logged to Firestore.");
-    } catch (e) {
-        console.error("Error logging chat entry:", e);
-    }
+  if (!db) {
+    console.warn("Firestore not initialized. Cannot log chat entry.");
+    return;
+  }
+
+  const userId = auth?.currentUser?.uid || 'anonymous';
+  // Using a public path structure for simplicity in this demo.
+
+  try {
+    const chatCollection = collection(db, `chat_logs`);
+
+    await addDoc(chatCollection, {
+      userId: userId,
+      userQuery: userInput,
+      aiResponse: aiResponse,
+      timestamp: new Date(),
+      model: 'gemini-2.5-flash',
+      context: 'RAG-Lite'
+    });
+    console.log("📝 Chat entry logged to Firestore.");
+  } catch (e) {
+    console.error("Error logging chat entry:", e);
+  }
 };
 
 // --- COMPONENTS ---
@@ -122,10 +158,10 @@ const Login = ({ onOfflineLogin }) => {
     } catch (error) {
       console.error("Login failed:", error);
       if (error.code === 'auth/popup-blocked' || error.code === 'auth/operation-not-supported-in-this-environment') {
-         // Fallback for restrictive environments
-         await signInAnonymously(auth);
+        // Fallback for restrictive environments
+        await signInAnonymously(auth);
       } else {
-         alert(`Authentication failed: ${error.message}`);
+        alert(`Authentication failed: ${error.message}`);
       }
     }
   };
@@ -140,7 +176,7 @@ const Login = ({ onOfflineLogin }) => {
         <p className="text-neutral-400 mb-8">
           This area requires Director-level clearance. Please authenticate to continue.
         </p>
-        <button 
+        <button
           onClick={handleLogin}
           className="w-full bg-white text-neutral-950 font-bold py-3 px-6 rounded-lg hover:bg-neutral-200 transition-colors flex items-center justify-center gap-2"
         >
@@ -180,15 +216,15 @@ const ChatInterface = ({ user }) => {
     setInputValue("");
     setIsTyping(true);
 
-    
+
     // Standard Gemini API Key from environment
     const apiKey = GEMINI_API_KEY;
 
     if (!apiKey) {
       setTimeout(() => {
-        setMessages(prev => [...prev, { 
-          role: 'assistant', 
-          text: "⚠️ MISSING API KEY: Please set `VITE_GEMINI_API_KEY` in your environment variables." 
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          text: "⚠️ MISSING API KEY: Please set `VITE_GEMINI_API_KEY` in your environment variables."
         }]);
         setIsTyping(false);
       }, 500);
@@ -196,17 +232,17 @@ const ChatInterface = ({ user }) => {
     }
 
     const targetModel = "gemini-2.5-flash";
-    
+
     // 1. RETRIEVAL: Pull context based on the current user input
     const contextualData = getContextualData(userInput);
 
     // 2. AUGMENTATION: Build the final prompt by combining the persona and the relevant data
     // Use externalSystemPrompt (imported from data file)
     const baseContext = typeof externalSystemPrompt !== 'undefined' ? externalSystemPrompt : "You are a helpful assistant.";
-    
-    const finalSystemPrompt = contextualData 
-        ? `${baseContext}\n\n[SYSTEM INJECTION: RELEVANT DATA FOUND]\nUse the following specific project details to answer the user's question:\n${contextualData}` 
-        : baseContext; // Fallback to generic persona if no specific keywords match
+
+    const finalSystemPrompt = contextualData
+      ? `${baseContext}\n\n[SYSTEM INJECTION: RELEVANT DATA FOUND]\nUse the following specific project details to answer the user's question:\n${contextualData}`
+      : baseContext; // Fallback to generic persona if no specific keywords match
 
     let aiResponse = "I'm having trouble connecting right now.";
 
@@ -222,7 +258,7 @@ const ChatInterface = ({ user }) => {
         body: JSON.stringify({
           contents: [
             { role: 'user', parts: [{ text: finalSystemPrompt }] }, // Use the RAG prompt
-            ...historyForApi 
+            ...historyForApi
           ]
         })
       });
@@ -240,7 +276,7 @@ const ChatInterface = ({ user }) => {
     } finally {
       setIsTyping(false);
       // LOG THE CHAT ENTRY
-      await logChatEntry(user, userInput, aiResponse); 
+      await logChatEntry(user, userInput, aiResponse);
     }
   };
 
@@ -265,9 +301,9 @@ const ChatInterface = ({ user }) => {
         {isTyping && (
           <div className="flex justify-start">
             <div className="bg-neutral-950 border border-neutral-800 p-4 rounded-lg flex gap-2 items-center">
-               <span className="w-2 h-2 bg-neutral-500 rounded-full animate-bounce"></span>
-               <span className="w-2 h-2 bg-neutral-500 rounded-full animate-bounce [animation-delay:0.2s]"></span>
-               <span className="w-2 h-2 bg-neutral-500 rounded-full animate-bounce [animation-delay:0.4s]"></span>
+              <span className="w-2 h-2 bg-neutral-500 rounded-full animate-bounce"></span>
+              <span className="w-2 h-2 bg-neutral-500 rounded-full animate-bounce [animation-delay:0.2s]"></span>
+              <span className="w-2 h-2 bg-neutral-500 rounded-full animate-bounce [animation-delay:0.4s]"></span>
             </div>
           </div>
         )}
@@ -296,7 +332,7 @@ const App = () => {
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 50);
     window.addEventListener('scroll', handleScroll);
-    
+
     // Auth Listener
     if (auth) {
       const unsubscribe = onAuthStateChanged(auth, setUser);
@@ -357,7 +393,7 @@ const App = () => {
       {/* Navigation */}
       <nav className={`fixed w-full z-50 transition-all duration-300 border-b border-white/5 ${isScrolled ? 'bg-neutral-950/90 backdrop-blur-md py-4 shadow-xl' : 'bg-transparent py-6'}`}>
         <div className="container mx-auto px-6 flex justify-between items-center">
-          <div className="flex items-center gap-3 font-bold text-xl tracking-tight cursor-pointer" onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}>
+          <div className="flex items-center gap-3 font-bold text-xl tracking-tight cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
             <div className="bg-rose-600 p-1.5 rounded-md"><Terminal className="w-5 h-5 text-white" /></div>
             <span>RAPHAEL<span className="text-neutral-500">JEDWARDS</span></span>
           </div>
@@ -399,7 +435,7 @@ const App = () => {
         <div className="container mx-auto px-6">
           <div className="grid md:grid-cols-2 gap-16 items-center">
             <div className="relative order-2 md:order-1">
-              <h2 className="text-3xl md:text-5xl font-bold mb-6">Architecting Scalable<br/>Digital Success</h2>
+              <h2 className="text-3xl md:text-5xl font-bold mb-6">Architecting Scalable<br />Digital Success</h2>
               <p className="text-neutral-400 text-lg leading-relaxed mb-6">A technology executive with a "builder" mindset. I don't just manage complexity; I architect the strategic programs that scale global success. From web security to enterprise growth, I lead the high-performance teams that deliver measurable business value.</p>
               <p className="text-neutral-500 text-base leading-relaxed mb-8 italic border-l-2 border-neutral-800 pl-4">Proven by a track record of architecting strategic programs that turn small investments into multi-million dollar recurring revenue loops.</p>
               <div className="flex gap-6">
@@ -407,7 +443,7 @@ const App = () => {
                 <a href="https://github.com/raphaeledwards" className="flex items-center gap-2 text-white hover:text-rose-500 transition-colors font-bold"><Globe size={20} /> Github</a>
               </div>
             </div>
-             <div className="relative order-1 md:order-2">
+            <div className="relative order-1 md:order-2">
               <div className="aspect-square rounded-2xl overflow-hidden bg-neutral-900 border border-neutral-800 relative z-10 group">
                 <img src={headshot} alt="Raphael J. Edwards" className="w-full h-full object-cover grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700" />
                 <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black/90 to-transparent"><div className="flex items-center gap-2 text-rose-500 mb-1 font-bold"><MapPin size={16} /> Boston, MA</div></div>
@@ -466,21 +502,21 @@ const App = () => {
       {/* Blog */}
       <section id="blog" className="py-24 bg-neutral-900">
         <div className="container mx-auto px-6 max-w-4xl">
-           <div className="flex justify-between items-end mb-12">
+          <div className="flex justify-between items-end mb-12">
             <h2 className="text-3xl md:text-4xl font-bold">Latest Insights</h2>
             <button className="text-rose-500 font-bold hover:text-white transition-colors">View All Posts</button>
-           </div>
-           <div className="space-y-6">
-             {BLOG_POSTS.map(post => (
-               <div key={post.id} className="group block bg-neutral-950 p-8 rounded-xl border border-neutral-800 hover:border-rose-500/40 transition-all cursor-pointer">
-                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-3">
-                   <h3 className="text-xl font-bold text-white group-hover:text-rose-500 transition-colors">{post.title}</h3>
-                   <span className="text-xs font-bold text-neutral-500 uppercase tracking-wide whitespace-nowrap">{post.date}</span>
-                 </div>
-                 <p className="text-neutral-400">{post.excerpt}</p>
-               </div>
-             ))}
-           </div>
+          </div>
+          <div className="space-y-6">
+            {BLOG_POSTS.map(post => (
+              <div key={post.id} className="group block bg-neutral-950 p-8 rounded-xl border border-neutral-800 hover:border-rose-500/40 transition-all cursor-pointer">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-3">
+                  <h3 className="text-xl font-bold text-white group-hover:text-rose-500 transition-colors">{post.title}</h3>
+                  <span className="text-xs font-bold text-neutral-500 uppercase tracking-wide whitespace-nowrap">{post.date}</span>
+                </div>
+                <p className="text-neutral-400">{post.excerpt}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -507,9 +543,9 @@ const App = () => {
             <div className="flex items-center gap-2 font-bold text-lg"><Terminal className="w-5 h-5 text-rose-500" /><span>RAPHAEL<span className="text-neutral-500">JEDWARDS</span></span></div>
             <div className="text-neutral-500 text-sm">&copy; {new Date().getFullYear()} Raphael J. Edwards. All rights reserved.</div>
             <div className="flex gap-6">
-               <span className="text-xs text-neutral-600 font-medium uppercase tracking-wider">Strategy</span>
-               <span className="text-xs text-neutral-600 font-medium uppercase tracking-wider">Cloud</span>
-               <span className="text-xs text-neutral-600 font-medium uppercase tracking-wider">Security</span>
+              <span className="text-xs text-neutral-600 font-medium uppercase tracking-wider">Strategy</span>
+              <span className="text-xs text-neutral-600 font-medium uppercase tracking-wider">Cloud</span>
+              <span className="text-xs text-neutral-600 font-medium uppercase tracking-wider">Security</span>
             </div>
           </div>
         </div>
