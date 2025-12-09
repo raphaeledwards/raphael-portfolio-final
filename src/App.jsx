@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Terminal, ChevronRight, MapPin, Linkedin, Globe, Mail, Menu, X as CloseIcon, MessageSquare, Send, BrainCircuit, Lock, Users, Cloud, Sparkles } from 'lucide-react';
+import { Terminal, ChevronRight, MapPin, Linkedin, Globe, Mail, Menu, X as CloseIcon, MessageSquare, Send, BrainCircuit, Lock, Users, Cloud, Sparkles, LogOut } from 'lucide-react';
 
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
@@ -161,7 +161,7 @@ const ICON_MAP = {
 
 
 // 2. CHAT INTERFACE
-const ChatInterface = ({ user, projects, expertise, blogs, onClose, activeSection }) => {
+const ChatInterface = ({ user, projects, expertise, blogs, onClose, activeSection, onLogout }) => {
   const [messages, setMessages] = useState([
     { role: 'assistant', text: `Identity confirmed: ${user?.email || 'Director'}. Accessing neural archives... Hello. I am Raphael's digital twin. Ask me about his architecture philosophy, leadership style, or technical experience.` }
   ]);
@@ -263,6 +263,7 @@ const ChatInterface = ({ user, projects, expertise, blogs, onClose, activeSectio
           <span className="font-mono text-sm text-neutral-400">NEURAL LINK: <span className="text-green-500">ACTIVE</span></span>
         </div>
         <div className="flex gap-2">
+          <button onClick={onLogout} className="p-1 hover:bg-neutral-800 rounded text-neutral-400 hover:text-rose-500 transition-colors" title="Sign Out"><LogOut size={18} /></button>
           <button onClick={onClose} className="p-1 hover:bg-neutral-800 rounded text-neutral-400 hover:text-white transition-colors"><CloseIcon size={20} /></button>
         </div>
       </div>
@@ -607,7 +608,7 @@ const App = () => {
             <Login onOfflineLogin={handleOfflineLogin} />
           </div>
         ) : (
-          <ChatInterface user={user} projects={projectItems} expertise={expertiseAreas} blogs={blogPosts} onClose={() => setShowChat(false)} activeSection={activeSection} />
+          <ChatInterface user={user} projects={projectItems} expertise={expertiseAreas} blogs={blogPosts} onClose={() => setShowChat(false)} activeSection={activeSection} onLogout={handleLogout} />
         )}
       </div>
     </div>
