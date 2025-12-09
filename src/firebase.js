@@ -13,13 +13,28 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+// Initialize Firebase and Services
+let app;
+let auth;
+let db;
+let googleProvider;
 
-// Initialize Services
-export const auth = getAuth(app);
-export const db = getFirestore(app); // Exports the Database for your RAG/Analytics
-export const googleProvider = new GoogleAuthProvider();
+try {
+  // Simple validation to prevent crash if env vars are missing
+  if (!firebaseConfig.apiKey) throw new Error("Missing Firebase API Key");
+
+  app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app);
+  googleProvider = new GoogleAuthProvider();
+} catch (error) {
+  console.error("Firebase Initialization Error:", error);
+  // Export dummy objects to prevent import errors in App.jsx
+  auth = { currentUser: null };
+  db = null;
+}
+
+export { auth, db, googleProvider };
 
 // Only init analytics if supported (optional safety check)
 let analytics;
