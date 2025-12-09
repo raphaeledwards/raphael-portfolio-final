@@ -34,6 +34,15 @@ const SECTION_SUGGESTIONS = {
   contact: ["How can we collaborate?", "Are you open to advisory roles?", "What is your consulting rate?"]
 };
 
+// --- CONFIG: DEVELOPER MODE SUGGESTIONS ---
+const DEV_SUGGESTIONS = [
+  "How does the RAG vector search work?",
+  "Show me the source code for the Admin Panel",
+  "Explain the Firestore authentication logic",
+  "What is the system prompt for the AI?",
+  "How are the lazy suggestion chips implemented?"
+];
+
 // --- DATA ---
 // --- DATA ---
 import { PROJECT_ITEMS as INITIAL_PROJECTS, EXPERTISE_AREAS as INITIAL_EXPERTISE, BLOG_POSTS as INITIAL_BLOGS, NAV_LINKS } from './data/portfolioData';
@@ -173,7 +182,10 @@ const ChatInterface = ({ user, projects, expertise, blogs, sourceCodes, onClose,
   const messagesEndRef = useRef(null);
 
   // Get current suggestions based on section, fallback to 'home'
-  const currentSuggestions = SECTION_SUGGESTIONS[activeSection] || SECTION_SUGGESTIONS['home'];
+  // If Dev Mode is active, show technical queries instead
+  const currentSuggestions = isDevMode
+    ? DEV_SUGGESTIONS
+    : (SECTION_SUGGESTIONS[activeSection] || SECTION_SUGGESTIONS['home']);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -308,12 +320,17 @@ const ChatInterface = ({ user, projects, expertise, blogs, sourceCodes, onClose,
       {/* Suggestion Chips */}
       <div className="px-4 pt-2 pb-0 flex flex-wrap gap-2">
         {currentSuggestions.map((suggestion, idx) => (
+
           <button
             key={`${activeSection}-${idx}`}
             onClick={() => handleSendMessage(suggestion)}
-            className="text-xs bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 hover:border-rose-500/50 text-rose-500 hover:text-rose-400 px-3 py-1.5 rounded-full transition-all animate-in fade-in slide-in-from-bottom-2 duration-300 cursor-pointer flex items-center gap-1 group whitespace-nowrap"
+            className={`text-xs px-3 py-1.5 rounded-full transition-all animate-in fade-in slide-in-from-bottom-2 duration-300 cursor-pointer flex items-center gap-1 group whitespace-nowrap border ${isDevMode
+                ? 'bg-blue-500/10 border-blue-500/20 hover:bg-blue-500/20 hover:border-blue-500/50 text-blue-400 hover:text-blue-300'
+                : 'bg-rose-500/10 border-rose-500/20 hover:bg-rose-500/20 hover:border-rose-500/50 text-rose-500 hover:text-rose-400'
+              }`}
           >
-            <Sparkles size={10} className="group-hover:text-amber-400 transition-colors" /> {suggestion}
+            {isDevMode ? <Code size={10} /> : <Sparkles size={10} className="group-hover:text-amber-400 transition-colors" />}
+            {suggestion}
           </button>
         ))}
       </div>
