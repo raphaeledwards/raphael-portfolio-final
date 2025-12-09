@@ -27,8 +27,8 @@ const Login = ({ onOfflineLogin }) => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[50vh] p-4 bg-neutral-950 text-white font-sans animate-in fade-in zoom-in-95 duration-300">
-      <div className="bg-neutral-900 border border-neutral-800 p-8 rounded-2xl text-center max-w-md w-full shadow-2xl">
+    <div className="flex flex-col items-center justify-center p-6 bg-transparent text-white font-sans animate-in fade-in zoom-in-95 duration-300">
+      <div className="w-full text-center">
         <div className="bg-neutral-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
           <Lock className="w-8 h-8 text-rose-500" />
         </div>

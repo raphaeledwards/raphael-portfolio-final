@@ -5,7 +5,7 @@ import { seedDatabase } from '../services/contentService';
 
 const AdminPanel = ({ isOpen, onClose }) => {
     const [seedingStatus, setSeedingStatus] = useState(null); // 'loading', 'success', 'error'
-    const ALLOWED_EMAILS = ["raphael@raphaeljedwards.com"];
+    const ALLOWED_EMAILS = ["raphaeledwards@gmail.com"];
 
     // Check if user is authorized
     const isAuthorized = auth.currentUser && ALLOWED_EMAILS.includes(auth.currentUser.email);

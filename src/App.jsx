@@ -268,6 +268,7 @@ const App = () => {
   const [user, setUser] = useState(null);
   const [showChat, setShowChat] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   // Dynamic Content State
   const [projectItems, setProjectItems] = useState(INITIAL_PROJECTS);
@@ -296,7 +297,10 @@ const App = () => {
 
     // Auth Listener
     if (auth) {
-      const unsubscribe = onAuthStateChanged(auth, setUser);
+      const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+        setUser(currentUser);
+        if (currentUser) setShowLoginModal(false);
+      });
       return () => {
         window.removeEventListener('scroll', handleScroll);
         unsubscribe();
@@ -346,7 +350,13 @@ const App = () => {
           </div>
         </nav>
         <div className="flex-1 flex items-center justify-center p-4">
-          {!user ? <Login onOfflineLogin={handleOfflineLogin} /> : <div className="w-full max-w-6xl mx-auto"><ChatInterface user={user} projects={projectItems} expertise={expertiseAreas} blogs={blogPosts} /></div>}
+          {!user ? (
+            <div className="bg-neutral-900 border border-neutral-800 p-8 rounded-2xl w-full max-w-md shadow-2xl">
+              <Login onOfflineLogin={handleOfflineLogin} />
+            </div>
+          ) : (
+            <div className="w-full max-w-6xl mx-auto"><ChatInterface user={user} projects={projectItems} expertise={expertiseAreas} blogs={blogPosts} /></div>
+          )}
         </div>
         <AdminPanel isOpen={showAdminPanel} onClose={() => setShowAdminPanel(false)} />
       </div>
@@ -521,12 +531,28 @@ const App = () => {
             <div className="flex gap-6">
               <span className="text-xs text-neutral-600 font-medium uppercase tracking-wider">Strategy</span>
               <span className="text-xs text-neutral-600 font-medium uppercase tracking-wider">Cloud</span>
+
               <span className="text-xs text-neutral-600 font-medium uppercase tracking-wider">Security</span>
+              <button onClick={() => user ? setShowAdminPanel(true) : setShowLoginModal(true)} className="text-neutral-800 hover:text-neutral-600 transition-colors" aria-label="Admin Access">
+                <Lock size={10} />
+              </button>
             </div>
           </div>
         </div>
       </footer>
       <AdminPanel isOpen={showAdminPanel} onClose={() => setShowAdminPanel(false)} />
+
+      {/* Decoupled Login Modal */}
+      {showLoginModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-2xl overflow-hidden shadow-2xl">
+            <button onClick={() => setShowLoginModal(false)} className="absolute top-4 right-4 text-neutral-400 hover:text-white z-10 p-2">
+              <CloseIcon size={20} />
+            </button>
+            <Login onOfflineLogin={handleOfflineLogin} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
