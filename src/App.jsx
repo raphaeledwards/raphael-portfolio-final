@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Terminal, ChevronRight, MapPin, Linkedin, Globe, Mail, Menu, X as CloseIcon, MessageSquare, Send, BrainCircuit, Lock, Users, Cloud, Sparkles, LogOut } from 'lucide-react';
+import { Terminal, ChevronRight, MapPin, Linkedin, Globe, Mail, Menu, X as CloseIcon, MessageSquare, Send, BrainCircuit, Lock, Users, Cloud, Sparkles, LogOut, Code } from 'lucide-react';
 
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
@@ -47,22 +47,23 @@ import { getEmbedding, cosineSimilarity } from './utils/vectorUtils';
 // --- UTILITY: RAG RETRIEVAL ---
 
 // --- UTILITY: RAG RETRIEVAL ---
-const getContextualData = async (query, projects, expertise, blogs) => {
+const getContextualData = async (query, projects, expertise, blogs, sourceCodes = [], isDevMode = false) => {
   if (!query) return "";
 
   // 1. Try Vector Search first
   const queryEmbedding = await getEmbedding(query);
 
   if (queryEmbedding) {
-    // Collect all items with embeddings
+    // Collect all items with embeddings, conditionally including code
     const allItems = [
       ...projects.map(p => ({ type: 'PROJECT', data: p })),
       ...expertise.map(e => ({ type: 'EXPERTISE', data: e })),
-      ...blogs.map(b => ({ type: 'BLOG', data: b }))
+      ...blogs.map(b => ({ type: 'BLOG', data: b })),
+      ...(isDevMode ? sourceCodes.map(s => ({ type: 'CODE', data: s })) : [])
     ].filter(item => item.data.embedding && Array.isArray(item.data.embedding));
 
     if (allItems.length > 0) {
-      console.log(`[RAG] Vector search across ${allItems.length} items.`);
+      console.log(`[RAG] Vector search across ${allItems.length} items. DevMode: ${isDevMode}`);
       const scored = allItems.map(item => ({
         ...item,
         score: cosineSimilarity(queryEmbedding, item.data.embedding)
@@ -72,7 +73,7 @@ const getContextualData = async (query, projects, expertise, blogs) => {
       const relevant = scored
         .filter(item => item.score > 0.45) // Threshold can be tuned
         .sort((a, b) => b.score - a.score)
-        .slice(0, 5);
+        .slice(0, isDevMode ? 3 : 5); // Fewer items if code (as code is large)
 
       if (relevant.length > 0) {
         console.log("[RAG] Vector matches found:", relevant.map(r => r.data.title));
@@ -81,6 +82,7 @@ const getContextualData = async (query, projects, expertise, blogs) => {
           if (type === 'PROJECT') return `[PROJECT] ${data.title} (${data.category}): ${data.description}`;
           if (type === 'EXPERTISE') return `[EXPERTISE] ${data.title}: ${data.description}`;
           if (type === 'BLOG') return `[BLOG] ${data.title} (${data.date}): ${data.excerpt}`;
+          if (type === 'CODE') return `[SOURCE CODE - ${data.title}]\n${data.description}\n\nCONTENT:\n${data.content}`;
           return "";
         }).join('\n---\n');
       }
@@ -89,7 +91,7 @@ const getContextualData = async (query, projects, expertise, blogs) => {
     }
   }
 
-  // 2. Fallback to Keyword Search
+  // 2. Fallback to Keyword Search (Code excluded for now in keyword search to keep it simple)
   const lowerQuery = query.toLowerCase();
   const keywords = lowerQuery.split(/\s+/).filter(w => w.length > 2);
 
@@ -161,12 +163,13 @@ const ICON_MAP = {
 
 
 // 2. CHAT INTERFACE
-const ChatInterface = ({ user, projects, expertise, blogs, onClose, activeSection, onLogout }) => {
+const ChatInterface = ({ user, projects, expertise, blogs, sourceCodes, onClose, activeSection, onLogout }) => {
   const [messages, setMessages] = useState([
     { role: 'assistant', text: `Identity confirmed: ${user?.email || 'Director'}. Accessing neural archives... Hello. I am Raphael's digital twin. Ask me about his architecture philosophy, leadership style, or technical experience.` }
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [isDevMode, setIsDevMode] = useState(false);
   const messagesEndRef = useRef(null);
 
   // Get current suggestions based on section, fallback to 'home'
@@ -209,11 +212,16 @@ const ChatInterface = ({ user, projects, expertise, blogs, onClose, activeSectio
 
     // 1. RETRIEVAL: Pull context based on the current user input
     // Pass dynamic data to RAG
-    const contextualData = await getContextualData(userInput, projects, expertise, blogs);
+    const contextualData = await getContextualData(userInput, projects, expertise, blogs, sourceCodes, isDevMode);
 
     // 2. AUGMENTATION: Build the final prompt by combining the persona and the relevant data
     // Use externalSystemPrompt (imported from data file)
-    const baseContext = typeof externalSystemPrompt !== 'undefined' ? externalSystemPrompt : "You are a helpful assistant.";
+    let baseContext = typeof externalSystemPrompt !== 'undefined' ? externalSystemPrompt : "You are a helpful assistant.";
+
+    // Inject Developer Mode Persona
+    if (isDevMode) {
+      baseContext += "\n\n[MODE: DEVELOPER] You are now in 'Code Archaeologist' mode. You have access to the actual source code of this application. When answering, cite specific files and lines of code if provided in the context. Explain the architecture and logic like a senior principal engineer conducting a code walkthrough. Be technical, precise, and transparent.";
+    }
 
     const finalSystemPrompt = contextualData
       ? `${baseContext}\n\n[SYSTEM INJECTION: RELEVANT DATA FOUND]\nUse the following specific project details to answer the user's question:\n${contextualData}`
@@ -264,6 +272,15 @@ const ChatInterface = ({ user, projects, expertise, blogs, onClose, activeSectio
         </div>
         <div className="flex gap-2">
           <button onClick={onLogout} className="p-1 hover:bg-neutral-800 rounded text-neutral-400 hover:text-rose-500 transition-colors" title="Sign Out"><LogOut size={18} /></button>
+
+          <button
+            onClick={() => setIsDevMode(!isDevMode)}
+            className={`p-1 rounded transition-colors ${isDevMode ? 'text-blue-400 bg-blue-400/10' : 'text-neutral-400 hover:bg-neutral-800'}`}
+            title={isDevMode ? "Disable Developer Mode" : "Enable Developer Mode"}
+          >
+            <Code size={18} />
+          </button>
+
           <button onClick={onClose} className="p-1 hover:bg-neutral-800 rounded text-neutral-400 hover:text-white transition-colors"><CloseIcon size={20} /></button>
         </div>
       </div>
@@ -325,16 +342,19 @@ const App = () => {
   const [projectItems, setProjectItems] = useState(INITIAL_PROJECTS);
   const [expertiseAreas, setExpertiseAreas] = useState(INITIAL_EXPERTISE);
   const [blogPosts, setBlogPosts] = useState(INITIAL_BLOGS);
+  const [sourceCodes, setSourceCodes] = useState([]);
 
   useEffect(() => {
     const loadContent = async () => {
       const projects = await fetchContent('projects', INITIAL_PROJECTS);
       const expertise = await fetchContent('expertise', INITIAL_EXPERTISE);
       const blogs = await fetchContent('blogs', INITIAL_BLOGS);
+      const code = await fetchContent('source_code', []);
 
       setProjectItems(projects);
       setExpertiseAreas(expertise); // Note: Icons might need re-mapping if fetched from DB (where they are just names/strings)
       setBlogPosts(blogs);
+      setSourceCodes(code);
     };
     loadContent();
   }, []);
@@ -608,7 +628,7 @@ const App = () => {
             <Login onOfflineLogin={handleOfflineLogin} />
           </div>
         ) : (
-          <ChatInterface user={user} projects={projectItems} expertise={expertiseAreas} blogs={blogPosts} onClose={() => setShowChat(false)} activeSection={activeSection} onLogout={handleLogout} />
+          <ChatInterface user={user} projects={projectItems} expertise={expertiseAreas} blogs={blogPosts} sourceCodes={sourceCodes} onClose={() => setShowChat(false)} activeSection={activeSection} onLogout={handleLogout} />
         )}
       </div>
     </div>

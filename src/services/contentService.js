@@ -1,6 +1,7 @@
 import { db } from '../firebase';
 import { collection, getDocs, doc, setDoc, writeBatch, query, orderBy, limit } from 'firebase/firestore';
 import { PROJECT_ITEMS, EXPERTISE_AREAS, BLOG_POSTS } from '../data/portfolioData';
+import { SOURCE_CODE_MANIFEST } from '../data/sourceCodeManifest';
 import { Users, Lock, Cloud, BrainCircuit } from 'lucide-react';
 import { getEmbedding } from '../utils/vectorUtils';
 
@@ -8,7 +9,8 @@ import { getEmbedding } from '../utils/vectorUtils';
 const COLLECTIONS = {
     PROJECTS: 'projects',
     EXPERTISE: 'expertise',
-    BLOGS: 'blogs'
+    BLOGS: 'blogs',
+    CODE: 'source_code'
 };
 
 /**
@@ -182,4 +184,52 @@ export const updateEmbeddings = async () => {
 
     await batch.commit();
     return "Embeddings generated and updated.";
+};
+
+/**
+ * Indexes the source code into Firestore with Embeddings.
+ * This allows the AI to "read" the code.
+ */
+export const indexSourceCode = async () => {
+    if (!db) throw new Error("Firestore not initialized");
+
+    const batch = writeBatch(db);
+    console.log("Indexing Source Code...");
+
+    for (const file of SOURCE_CODE_MANIFEST) {
+        console.log(`Processing ${file.title}...`);
+
+        // Chunking Strategy:
+        // For now, we will treat the whole file as one chunk unless it's too big, 
+        // but for RAG accuracy on large files, we might strictly want to chunk.
+        // However, typical component files (under 300 lines) handle okay with current LLM context windows.
+        // We will just embed the description + title + a snippet/explanation as the vector, 
+        // but store the FULL content in the text field.
+
+        // Improved Embedding Strategy for Code:
+        // Embed the "Concept" of the file (Title + Description + Headers/Exports)
+        // This ensures that "How does RAG work?" matches vectorUtils.js even if the code is dense.
+        const textToEmbed = `Code File: ${file.title}. Description: ${file.description}. Content Preview: ${file.content.slice(0, 500)}`;
+
+        const embedding = await getEmbedding(textToEmbed);
+
+        if (embedding) {
+            const docRef = doc(db, COLLECTIONS.CODE, file.id);
+            batch.set(docRef, {
+                id: file.id,
+                title: file.title,
+                description: file.description,
+                category: 'Source Code',
+                content: file.content, // Store full raw content
+                embedding: embedding,
+                timestamp: new Date()
+            });
+        }
+
+        // Rate limit safeguard
+        await new Promise(r => setTimeout(r, 1000));
+    }
+
+    await batch.commit();
+    return `Indexed ${SOURCE_CODE_MANIFEST.length} source files.`;
 };

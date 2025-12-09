@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Lock, Database, X, MessageSquare, ChevronRight, LogOut, BrainCircuit } from 'lucide-react';
 import { auth } from '../firebase';
 import { signOut } from 'firebase/auth';
-import { seedDatabase, fetchChatLogs } from '../services/contentService';
+import { seedDatabase, fetchChatLogs, indexSourceCode } from '../services/contentService';
 
 const AdminPanel = ({ isOpen, onClose }) => {
     const [seedingStatus, setSeedingStatus] = useState(null); // 'loading', 'success', 'error'
@@ -137,6 +137,25 @@ const AdminPanel = ({ isOpen, onClose }) => {
                                         className="w-full bg-neutral-800 border border-neutral-700 text-white font-bold py-3 px-6 rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                                     >
                                         <BrainCircuit size={16} /> Generate Embeddings
+                                    </button>
+
+                                    <button
+                                        onClick={async () => {
+                                            if (!window.confirm("Index source code into RAG system?")) return;
+                                            setSeedingStatus('loading');
+                                            try {
+                                                const msg = await indexSourceCode();
+                                                alert(msg);
+                                            } catch (e) {
+                                                alert("Error: " + e.message);
+                                            } finally {
+                                                setSeedingStatus(null);
+                                            }
+                                        }}
+                                        disabled={seedingStatus === 'loading'}
+                                        className="w-full bg-neutral-800 border border-neutral-700 text-white font-bold py-3 px-6 rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                    >
+                                        <Database size={16} /> Index Source Code (Developer Mode)
                                     </button>
                                 </div>
                             ) : (
