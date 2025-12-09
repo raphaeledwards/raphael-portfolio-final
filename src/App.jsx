@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Terminal, ChevronRight, MapPin, Linkedin, Globe, Mail, Menu, X as CloseIcon, MessageSquare, Send, BrainCircuit, Lock, Users, Cloud } from 'lucide-react';
+import { Terminal, ChevronRight, MapPin, Linkedin, Globe, Mail, Menu, X as CloseIcon, MessageSquare, Send, BrainCircuit, Lock, Users, Cloud, Sparkles } from 'lucide-react';
 
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
@@ -23,6 +23,16 @@ import { auth, db } from './firebase';
 import { systemPrompt as externalSystemPrompt } from './data/resumeContext';
 import Login from './Login'; // Imported external component
 import AdminPanel from './components/AdminPanel'; // Import Admin Panel
+
+// --- CONFIG: LAZY SUGGESTION CHIPS ---
+const SECTION_SUGGESTIONS = {
+  home: ["What is your core leadership philosophy?", "Tell me about your technical background", "How do you scale engineering teams?"],
+  about: ["What is your management style?", "Tell me about your journey", "How do you handle conflict?"],
+  services: ["Tell me about Zero Trust Security", "How do you approach Cloud Migration?", "What is your compliance experience?"],
+  projects: ["What was your most challenging project?", "Tell me about the Event-Driven Architecture", "How did you optimize costs?"],
+  blog: ["Summarize your latest insights", "What are the key trends you see?", "Explain your view on AI agents"],
+  contact: ["How can we collaborate?", "Are you open to advisory roles?", "What is your consulting rate?"]
+};
 
 // --- DATA ---
 // --- DATA ---
@@ -151,7 +161,7 @@ const ICON_MAP = {
 
 
 // 2. CHAT INTERFACE
-const ChatInterface = ({ user, projects, expertise, blogs }) => {
+const ChatInterface = ({ user, projects, expertise, blogs, onClose, activeSection }) => {
   const [messages, setMessages] = useState([
     { role: 'assistant', text: `Identity confirmed: ${user?.email || 'Director'}. Accessing neural archives... Hello. I am Raphael's digital twin. Ask me about his architecture philosophy, leadership style, or technical experience.` }
   ]);
@@ -159,15 +169,23 @@ const ChatInterface = ({ user, projects, expertise, blogs }) => {
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
 
+  // Get current suggestions based on section, fallback to 'home'
+  const currentSuggestions = SECTION_SUGGESTIONS[activeSection] || SECTION_SUGGESTIONS['home'];
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (!inputValue.trim()) return;
+  const handleSendMessage = async (textOverride = null) => {
+    // If textOverride is an event (form submit), prevent default
+    if (textOverride && textOverride.preventDefault) textOverride.preventDefault();
 
-    const userInput = inputValue;
+    // Determine actual text to send
+    const textToSend = typeof textOverride === 'string' ? textOverride : inputValue;
+
+    if (!textToSend.trim()) return;
+
+    const userInput = textToSend;
     const newMessages = [...messages, { role: 'user', text: userInput }];
     setMessages(newMessages);
     setInputValue("");
@@ -238,13 +256,15 @@ const ChatInterface = ({ user, projects, expertise, blogs }) => {
   };
 
   return (
-    <div className="flex flex-col h-[80vh] bg-neutral-900 border border-neutral-800 rounded-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-300">
+    <div className="flex flex-col h-full bg-neutral-900 border-l border-neutral-800 shadow-2xl">
       <div className="bg-neutral-950 p-4 border-b border-neutral-800 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_#22c55e]"></div>
           <span className="font-mono text-sm text-neutral-400">NEURAL LINK: <span className="text-green-500">ACTIVE</span></span>
         </div>
-        <BrainCircuit className="text-neutral-600" size={20} />
+        <div className="flex gap-2">
+          <button onClick={onClose} className="p-1 hover:bg-neutral-800 rounded text-neutral-400 hover:text-white transition-colors"><CloseIcon size={20} /></button>
+        </div>
       </div>
       <div className="flex-1 overflow-y-auto p-6 space-y-6 font-mono text-sm">
         {messages.map((msg, idx) => (
@@ -266,6 +286,20 @@ const ChatInterface = ({ user, projects, expertise, blogs }) => {
         )}
         <div ref={messagesEndRef} />
       </div>
+
+      {/* Suggestion Chips */}
+      <div className="px-4 pt-2 pb-0 flex flex-wrap gap-2">
+        {currentSuggestions.map((suggestion, idx) => (
+          <button
+            key={`${activeSection}-${idx}`}
+            onClick={() => handleSendMessage(suggestion)}
+            className="text-xs bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 hover:border-rose-500/50 text-rose-500 hover:text-rose-400 px-3 py-1.5 rounded-full transition-all animate-in fade-in slide-in-from-bottom-2 duration-300 cursor-pointer flex items-center gap-1 group whitespace-nowrap"
+          >
+            <Sparkles size={10} className="group-hover:text-amber-400 transition-colors" /> {suggestion}
+          </button>
+        ))}
+      </div>
+
       <form onSubmit={handleSendMessage} className="p-4 bg-neutral-950 border-t border-neutral-800 flex gap-4">
         <input type="text" value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder="Enter query parameters..." className="flex-1 bg-neutral-900 border border-neutral-800 rounded-md px-4 py-3 text-white focus:outline-none focus:border-rose-500 font-mono text-sm transition-colors" />
         <button type="submit" disabled={!inputValue.trim() || isTyping} className="bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 rounded-md transition-colors flex items-center justify-center">
@@ -284,6 +318,7 @@ const App = () => {
   const [showChat, setShowChat] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [activeSection, setActiveSection] = useState('home');
 
   // Dynamic Content State
   const [projectItems, setProjectItems] = useState(INITIAL_PROJECTS);
@@ -310,6 +345,27 @@ const App = () => {
     const handleScroll = () => setIsScrolled(window.scrollY > 50);
     window.addEventListener('scroll', handleScroll);
 
+    // Section Observer
+    const observerOptions = {
+      root: null,
+      rootMargin: '0px',
+      threshold: 0.3 // Trigger when 30% of section is visible
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          setActiveSection(entry.target.id);
+        }
+      });
+    }, observerOptions);
+
+    // Observe all sections
+    ['home', 'about', 'services', 'projects', 'blog', 'contact'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
+
     // Auth Listener
     if (auth) {
       const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -319,9 +375,13 @@ const App = () => {
       return () => {
         window.removeEventListener('scroll', handleScroll);
         unsubscribe();
+        observer.disconnect();
       };
     } else {
-      return () => window.removeEventListener('scroll', handleScroll);
+      return () => {
+        window.removeEventListener('scroll', handleScroll);
+        observer.disconnect();
+      }
     }
   }, []);
 
@@ -345,38 +405,7 @@ const App = () => {
 
   const handleOfflineLogin = () => setUser({ uid: 'offline-demo-user', email: 'Offline Director' });
 
-  if (showChat) {
-    return (
-      <div className="min-h-screen bg-neutral-950 text-neutral-100 font-sans flex flex-col">
-        <nav className="border-b border-neutral-800 p-4 flex justify-between items-center bg-neutral-900">
-          <button onClick={() => setShowChat(false)} className="flex items-center gap-2 hover:text-rose-500 transition-colors font-medium">
-            <ChevronRight className="rotate-180" size={20} /> Back to Portfolio
-          </button>
-          <div className="flex items-center gap-4">
-            {user && (
-              <>
-                <button onClick={() => setShowAdminPanel(true)} className="flex items-center gap-2 text-rose-500 font-bold hover:text-white transition-colors mr-4">
-                  <Lock size={16} /> Admin
-                </button>
-                <span className="text-sm text-neutral-400 hidden md:inline">{user.email || 'Anonymous Director'}</span>
-                <button onClick={handleLogout} className="text-xs border border-neutral-700 px-3 py-1 rounded hover:bg-neutral-800 transition-colors">Sign Out</button>
-              </>
-            )}
-          </div>
-        </nav>
-        <div className="flex-1 flex items-center justify-center p-4">
-          {!user ? (
-            <div className="bg-neutral-900 border border-neutral-800 p-8 rounded-2xl w-full max-w-md shadow-2xl">
-              <Login onOfflineLogin={handleOfflineLogin} />
-            </div>
-          ) : (
-            <div className="w-full max-w-6xl mx-auto"><ChatInterface user={user} projects={projectItems} expertise={expertiseAreas} blogs={blogPosts} /></div>
-          )}
-        </div>
-        <AdminPanel isOpen={showAdminPanel} onClose={() => setShowAdminPanel(false)} />
-      </div>
-    );
-  }
+  /* Removed conditional return for Chat to allow overlay */
 
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 font-sans selection:bg-rose-600 selection:text-white">
@@ -568,6 +597,19 @@ const App = () => {
           </div>
         </div>
       )}
+
+      {/* CHAT OVERLAY SIDEBAR */}
+      <div className={`fixed inset-y-0 right-0 z-[60] w-full md:w-[450px] bg-neutral-900 border-l border-neutral-800 transform transition-transform duration-300 ease-in-out shadow-2xl ${showChat ? 'translate-x-0' : 'translate-x-full'}`}>
+        {!user ? (
+          <div className="h-full flex flex-col items-center justify-center p-8 relative">
+            <button onClick={() => setShowChat(false)} className="absolute top-4 right-4 text-neutral-400 hover:text-white"><CloseIcon /></button>
+            <h3 className="text-xl font-bold mb-4">Neural Access Required</h3>
+            <Login onOfflineLogin={handleOfflineLogin} />
+          </div>
+        ) : (
+          <ChatInterface user={user} projects={projectItems} expertise={expertiseAreas} blogs={blogPosts} onClose={() => setShowChat(false)} activeSection={activeSection} />
+        )}
+      </div>
     </div>
   );
 };
