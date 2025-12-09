@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Lock, Database, X, MessageSquare, ChevronRight } from 'lucide-react';
+import { Lock, Database, X, MessageSquare, ChevronRight, LogOut } from 'lucide-react';
 import { auth } from '../firebase';
+import { signOut } from 'firebase/auth';
 import { seedDatabase, fetchChatLogs } from '../services/contentService';
 
 const AdminPanel = ({ isOpen, onClose }) => {
@@ -41,6 +42,16 @@ const AdminPanel = ({ isOpen, onClose }) => {
         }
     };
 
+    const handleLogout = async () => {
+        try {
+            await signOut(auth);
+            onClose(); // Close the panel after logout
+        } catch (error) {
+            console.error("Error signing out: ", error);
+            alert("Error signing out");
+        }
+    };
+
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
             <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
@@ -73,7 +84,16 @@ const AdminPanel = ({ isOpen, onClose }) => {
                     {/* AUTH INFO */}
                     <div className="bg-neutral-950 p-4 rounded-lg border border-neutral-800 shrink-0">
                         <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Authenticated User</h3>
-                        <p className="font-mono text-green-500 truncate">{auth.currentUser?.email || 'Unknown User'}</p>
+                        <div className="flex items-center justify-between">
+                            <p className="font-mono text-green-500 truncate">{auth.currentUser?.email || 'Unknown User'}</p>
+                            <button
+                                onClick={handleLogout}
+                                className="text-xs bg-neutral-900 border border-neutral-700 text-neutral-400 hover:text-white hover:bg-red-900/30 hover:border-red-500/50 px-2 py-1 rounded transition-colors flex items-center gap-1"
+                                title="Sign Out"
+                            >
+                                <LogOut size={12} /> Sign Out
+                            </button>
+                        </div>
                     </div>
 
                     {/* TAB CONTENT: DATABASE */}
