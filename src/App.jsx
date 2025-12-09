@@ -235,6 +235,7 @@ const ChatInterface = ({ user }) => {
 
     // 1. RETRIEVAL: Pull context based on the current user input
     const contextualData = getContextualData(userInput);
+    console.log("🔍 [RAG DEBUG] Retrieved Context:", contextualData); // Added for verification
 
     // 2. AUGMENTATION: Build the final prompt by combining the persona and the relevant data
     // Use externalSystemPrompt (imported from data file)
