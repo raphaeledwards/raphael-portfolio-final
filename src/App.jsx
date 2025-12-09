@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Terminal, ChevronRight, MapPin, Linkedin, Globe, Mail, Menu, X as CloseIcon, MessageSquare, Send } from 'lucide-react';
+import { Terminal, ChevronRight, MapPin, Linkedin, Globe, Mail, Menu, X as CloseIcon, MessageSquare, Send, BrainCircuit } from 'lucide-react';
+
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { getFirestore, collection, addDoc } from 'firebase/firestore';
