@@ -23,7 +23,6 @@ import { auth, db } from './firebase';
 import { systemPrompt as externalSystemPrompt } from './data/resumeContext';
 import Login from './Login'; // Imported external component
 import AdminPanel from './components/AdminPanel'; // Import Admin Panel
-import './styles/xray.css'; // Import X-Ray Mode Styles
 
 // --- CONFIG: LAZY SUGGESTION CHIPS ---
 const SECTION_SUGGESTIONS = {
@@ -68,7 +67,7 @@ const getContextualData = async (query, projects, expertise, blogs, sourceCodes 
     ].filter(item => item.data.embedding && Array.isArray(item.data.embedding));
 
     if (allItems.length > 0) {
-      if (isDevMode) console.log(`[RAG] Vector search across ${allItems.length} items.`);
+      console.log(`[RAG] Vector search across ${allItems.length} items. DevMode: ${isDevMode}`);
       const scored = allItems.map(item => ({
         ...item,
         score: cosineSimilarity(queryEmbedding, item.data.embedding)
@@ -81,7 +80,7 @@ const getContextualData = async (query, projects, expertise, blogs, sourceCodes 
         .slice(0, isDevMode ? 3 : 5); // Fewer items if code (as code is large)
 
       if (relevant.length > 0) {
-        if (isDevMode) console.log("[RAG] Vector matches found:", relevant.map(r => r.data.title));
+        console.log("[RAG] Vector matches found:", relevant.map(r => r.data.title));
         return relevant.map(match => {
           const { type, data } = match;
           if (type === 'PROJECT') return `[PROJECT] ${data.title} (${data.category}): ${data.description}`;
@@ -92,7 +91,7 @@ const getContextualData = async (query, projects, expertise, blogs, sourceCodes 
         }).join('\n---\n');
       }
     } else {
-      if (isDevMode) console.log("[RAG] No embeddings found on data items. Falling back to Keywords.");
+      console.log("[RAG] No embeddings found on data items. Falling back to Keywords.");
     }
   }
 
@@ -168,12 +167,13 @@ const ICON_MAP = {
 
 
 // 2. CHAT INTERFACE
-const ChatInterface = ({ user, projects, expertise, blogs, sourceCodes, onClose, activeSection, onLogout, isDevMode, onToggleDevMode }) => {
+const ChatInterface = ({ user, projects, expertise, blogs, sourceCodes, onClose, activeSection, onLogout }) => {
   const [messages, setMessages] = useState([
     { role: 'assistant', text: `Identity confirmed: ${user?.email || 'Director'}. Accessing neural archives... Hello. I am Raphael's digital twin. Ask me about his architecture philosophy, leadership style, or technical experience.` }
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [isDevMode, setIsDevMode] = useState(false);
   const messagesEndRef = useRef(null);
 
   // Get current suggestions based on section, fallback to 'home'
@@ -281,7 +281,7 @@ const ChatInterface = ({ user, projects, expertise, blogs, sourceCodes, onClose,
           <button onClick={onLogout} className="p-1 hover:bg-neutral-800 rounded text-neutral-400 hover:text-rose-500 transition-colors" title="Sign Out"><LogOut size={18} /></button>
 
           <button
-            onClick={onToggleDevMode}
+            onClick={() => setIsDevMode(!isDevMode)}
             className={`p-1 rounded transition-colors ${isDevMode ? 'text-blue-400 bg-blue-400/10' : 'text-neutral-400 hover:bg-neutral-800'}`}
             title={isDevMode ? "Disable Developer Mode" : "Enable Developer Mode"}
           >
@@ -349,7 +349,6 @@ const App = () => {
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [activeSection, setActiveSection] = useState('home');
-  const [isDevMode, setIsDevMode] = useState(false);
 
   // Dynamic Content State
   const [projectItems, setProjectItems] = useState(INITIAL_PROJECTS);
@@ -442,7 +441,7 @@ const App = () => {
   /* Removed conditional return for Chat to allow overlay */
 
   return (
-    <div className={`min-h-screen bg-neutral-950 text-neutral-100 font-sans selection:bg-rose-600 selection:text-white ${isDevMode ? 'x-ray-mode' : ''}`}>
+    <div className="min-h-screen bg-neutral-950 text-neutral-100 font-sans selection:bg-rose-600 selection:text-white">
       {/* Navigation */}
       <nav className={`fixed w-full z-50 transition-all duration-300 border-b border-white/5 ${isScrolled ? 'bg-neutral-950/90 backdrop-blur-md py-4 shadow-xl' : 'bg-transparent py-6'}`}>
         <div className="container mx-auto px-6 flex justify-between items-center">
@@ -534,8 +533,7 @@ const App = () => {
       </section>
 
       {/* Projects */}
-      <section id="projects" className="py-24 px-6 bg-neutral-900 relative">
-        {isDevMode && <div className="x-ray-tooltip">FIRESTORE READ: 45ms (CACHED)</div>}
+      <section id="projects" className="py-24 px-6 bg-neutral-900">
         <div className="container mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
             <div>
@@ -651,19 +649,9 @@ const App = () => {
             onClose={() => setShowChat(false)}
             activeSection={activeSection}
             onLogout={handleLogout}
-            isDevMode={isDevMode}
-            onToggleDevMode={() => setIsDevMode(!isDevMode)}
           />
         )}
       </div>
-      {/* Global X-Ray Overlay for extra effect if needed */}
-      {
-        isDevMode && (
-          <div className="fixed bottom-4 right-4 z-[100] font-mono text-xs text-green-500 bg-black border border-green-500 px-2 py-1 pointer-events-none opacity-80">
-            SYS.MONITOR::ACTIVE
-          </div>
-        )
-      }
     </div >
   );
 };
