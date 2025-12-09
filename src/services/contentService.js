@@ -131,6 +131,11 @@ export const updateEmbeddings = async () => {
         for (let i = 0; i < group.data.length; i++) {
             const item = group.data[i];
 
+            // RATE LIMITING: Add a small delay to avoid hitting API quotas (429 errors)
+            // 1000ms delay = max 60 requests per minute, which is safer for free tiers.
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            console.log(`Processing item ${i + 1}/${group.data.length}...`);
+
             let textToEmbed = "";
             if (group.name === COLLECTIONS.PROJECTS) {
                 textToEmbed = `${item.title}. Category: ${item.category}. Tags: ${item.tags?.join(", ")}. Description: ${item.description}`;
