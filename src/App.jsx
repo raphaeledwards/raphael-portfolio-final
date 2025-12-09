@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Terminal, ChevronRight, MapPin, Linkedin, Globe, Mail, Menu, X as CloseIcon, MessageSquare, Send, BrainCircuit } from 'lucide-react';
+import { Terminal, ChevronRight, MapPin, Linkedin, Globe, Mail, Menu, X as CloseIcon, MessageSquare, Send, BrainCircuit, Lock, Users, Cloud } from 'lucide-react';
 
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
@@ -22,6 +22,7 @@ import { auth, db } from './firebase';
 // Imports the external system prompt for the AI persona
 import { systemPrompt as externalSystemPrompt } from './data/resumeContext';
 import Login from './Login'; // Imported external component
+import AdminPanel from './components/AdminPanel'; // Import Admin Panel
 
 // --- DATA ---
 // --- DATA ---
@@ -125,6 +126,13 @@ const logChatEntry = async (user, userInput, aiResponse) => {
 
 // --- COMPONENTS ---
 
+const ICON_MAP = {
+  "Users": Users, // Note: Users is not imported in App.jsx yet, need to check imports
+  "Lock": Lock,
+  "Cloud": Cloud, // Cloud not imported
+  "BrainCircuit": BrainCircuit
+};
+
 
 
 // 2. CHAT INTERFACE
@@ -169,7 +177,6 @@ const ChatInterface = ({ user, projects, expertise, blogs }) => {
     // 1. RETRIEVAL: Pull context based on the current user input
     // Pass dynamic data to RAG
     const contextualData = getContextualData(userInput, projects, expertise, blogs);
-    console.log("🔍 [RAG DEBUG] Retrieved Context:", contextualData); // Added for verification
 
     // 2. AUGMENTATION: Build the final prompt by combining the persona and the relevant data
     // Use externalSystemPrompt (imported from data file)
@@ -260,6 +267,7 @@ const App = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [showChat, setShowChat] = useState(false);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
 
   // Dynamic Content State
   const [projectItems, setProjectItems] = useState(INITIAL_PROJECTS);
@@ -328,6 +336,9 @@ const App = () => {
           <div className="flex items-center gap-4">
             {user && (
               <>
+                <button onClick={() => setShowAdminPanel(true)} className="flex items-center gap-2 text-rose-500 font-bold hover:text-white transition-colors mr-4">
+                  <Lock size={16} /> Admin
+                </button>
                 <span className="text-sm text-neutral-400 hidden md:inline">{user.email || 'Anonymous Director'}</span>
                 <button onClick={handleLogout} className="text-xs border border-neutral-700 px-3 py-1 rounded hover:bg-neutral-800 transition-colors">Sign Out</button>
               </>
@@ -337,6 +348,7 @@ const App = () => {
         <div className="flex-1 flex items-center justify-center p-4">
           {!user ? <Login onOfflineLogin={handleOfflineLogin} /> : <div className="w-full max-w-6xl mx-auto"><ChatInterface user={user} projects={projectItems} expertise={expertiseAreas} blogs={blogPosts} /></div>}
         </div>
+        <AdminPanel isOpen={showAdminPanel} onClose={() => setShowAdminPanel(false)} />
       </div>
     );
   }
@@ -350,8 +362,13 @@ const App = () => {
             <div className="bg-rose-600 p-1.5 rounded-md"><Terminal className="w-5 h-5 text-white" /></div>
             <span>RAPHAEL<span className="text-neutral-500">JEDWARDS</span></span>
           </div>
-          <div className="hidden md:flex items-center gap-8 text-sm font-medium tracking-wide uppercase">
+          <div className="flex items-center gap-8 text-sm font-medium tracking-wide uppercase">
             {NAV_LINKS.map(item => <button key={item} onClick={() => scrollToSection(item.toLowerCase())} className="hover:text-rose-500 transition-colors">{item}</button>)}
+            {user && (
+              <button onClick={() => setShowAdminPanel(true)} className="flex items-center gap-2 text-rose-500 font-bold hover:text-white transition-colors">
+                <Lock size={16} /> Admin
+              </button>
+            )}
             <button onClick={() => setShowChat(true)} className="flex items-center gap-2 text-rose-500 font-bold hover:text-white transition-colors"><MessageSquare size={16} /> AI Chat</button>
             <button className="ml-4 px-5 py-2 border border-neutral-700 bg-neutral-900 hover:bg-neutral-800 hover:border-rose-500 hover:text-rose-500 transition-all rounded-md text-xs font-bold" onClick={() => window.open('/Raphael_Edwards_CV.pdf', '_blank')}>Download CV</button>
           </div>
@@ -415,7 +432,10 @@ const App = () => {
               <div key={idx} className="group p-8 rounded-xl bg-neutral-900/50 border border-neutral-800 hover:border-rose-500/50 transition-all hover:-translate-y-1">
                 <div className="mb-6 inline-flex p-3 rounded-lg bg-neutral-800 text-rose-500 group-hover:bg-rose-500 group-hover:text-white transition-colors">
                   {/* Handle both icon component or just render a default since DB won't store functions */}
-                  {area.icon ? <area.icon size={24} /> : <Terminal size={24} />}
+                  {(() => {
+                    const IconComponent = area.icon || (area.iconName && ICON_MAP[area.iconName]) || Terminal;
+                    return <IconComponent size={24} />;
+                  })()}
                 </div>
                 <h3 className="text-xl font-bold mb-3">{area.title}</h3>
                 <p className="text-neutral-400 text-sm leading-relaxed">{area.description}</p>
@@ -506,6 +526,7 @@ const App = () => {
           </div>
         </div>
       </footer>
+      <AdminPanel isOpen={showAdminPanel} onClose={() => setShowAdminPanel(false)} />
     </div>
   );
 };

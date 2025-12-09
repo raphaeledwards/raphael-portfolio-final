@@ -1,6 +1,7 @@
 import { db } from '../firebase';
 import { collection, getDocs, doc, setDoc, writeBatch } from 'firebase/firestore';
 import { PROJECT_ITEMS, EXPERTISE_AREAS, BLOG_POSTS } from '../data/portfolioData';
+import { Users, Lock, Cloud, BrainCircuit } from 'lucide-react';
 
 // Collection Names
 const COLLECTIONS = {
@@ -56,6 +57,14 @@ export const seedDatabase = async () => {
             // Remove icon function from data if present (can't store functions in DB)
             // For Expertise, we store the metadata, but Icons need local mapping
             const { icon, ...dataToStore } = item;
+
+            // Serialize Icon if present
+            if (icon) {
+                if (icon === Users) dataToStore.iconName = "Users";
+                else if (icon === Lock) dataToStore.iconName = "Lock";
+                else if (icon === Cloud) dataToStore.iconName = "Cloud";
+                else if (icon === BrainCircuit) dataToStore.iconName = "BrainCircuit";
+            }
 
             batch.set(docRef, dataToStore);
             operationCount++;
