@@ -1,34 +1,28 @@
 import React from 'react';
 import { Lock } from 'lucide-react';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, signInAnonymously } from 'firebase/auth'; // Added signInAnonymously
+import { auth } from './firebase'; // Fixed import path from '../firebase' to './firebase' assuming same dir structure or check relative path
 
-// [CRITICAL FOR LOCAL USE]
-// Uncomment the line below in your local project so it can find your firebase config.
-// In this preview, we comment it out to prevent build errors since '../firebase' doesn't exist here.
- import { auth } from '../firebase'; 
-
-// [FOR PREVIEW ONLY]
-// This dummy auth object prevents the preview from crashing. 
-// Delete this line in your local project.
-//const auth = {}; 
-
-const Login = () => {
+const Login = ({ onOfflineLogin }) => {
   const handleLogin = async () => {
-    try {
-      // Ensure we have a valid auth instance before calling Firebase
-      if (!auth.currentUser && !auth.app) {
-         console.warn("Firebase auth not found. Make sure you uncommented the import in Login.jsx");
-         alert("Firebase config not found. (Did you uncomment the import in Login.jsx?)");
-         return;
-      }
+    if (!auth) {
+      console.warn("Auth not initialized. Check firebase configuration.");
+      // Fallback if auth is totally missing
+      if (onOfflineLogin) onOfflineLogin();
+      return;
+    }
 
+    try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
-      // No need to redirect manually; the onAuthStateChanged listener in App.jsx 
-      // will detect the login and switch the view automatically.
     } catch (error) {
       console.error("Login failed:", error);
-      alert(`Authentication failed: ${error.message}`);
+      if (error.code === 'auth/popup-blocked' || error.code === 'auth/operation-not-supported-in-this-environment') {
+        // Fallback for restrictive environments
+        await signInAnonymously(auth);
+      } else {
+        alert(`Authentication failed: ${error.message}`);
+      }
     }
   };
 
@@ -42,11 +36,10 @@ const Login = () => {
         <p className="text-neutral-400 mb-8">
           This area requires Director-level clearance. Please authenticate to continue.
         </p>
-        <button 
+        <button
           onClick={handleLogin}
           className="w-full bg-white text-neutral-950 font-bold py-3 px-6 rounded-lg hover:bg-neutral-200 transition-colors flex items-center justify-center gap-2"
         >
-          {/* SVG for Google Icon */}
           <svg className="w-5 h-5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
             <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
