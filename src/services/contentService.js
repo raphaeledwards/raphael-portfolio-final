@@ -1,5 +1,5 @@
 import { db } from '../firebase';
-import { collection, getDocs, doc, setDoc, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, writeBatch, query, orderBy, limit } from 'firebase/firestore';
 import { PROJECT_ITEMS, EXPERTISE_AREAS, BLOG_POSTS } from '../data/portfolioData';
 import { Users, Lock, Cloud, BrainCircuit } from 'lucide-react';
 
@@ -32,6 +32,35 @@ export const fetchContent = async (collectionName, fallbackData) => {
     } catch (error) {
         console.error(`[ContentService] Error fetching ${collectionName}:`, error);
         return fallbackData;
+    }
+};
+
+/**
+ * Fetches recent chat logs from Firestore.
+ */
+export const fetchChatLogs = async (limitCount = 50) => {
+    if (!db) return [];
+
+    try {
+        const q = query(
+            collection(db, 'chat_logs'),
+            orderBy('timestamp', 'desc'),
+            limit(limitCount)
+        );
+
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                // Convert Firestore Timestamp to Date object if needed, or keeping serializable
+                timestamp: data.timestamp?.toDate ? data.timestamp.toDate() : new Date(data.timestamp)
+            };
+        });
+    } catch (error) {
+        console.error("[ContentService] Error fetching logs:", error);
+        return [];
     }
 };
 
