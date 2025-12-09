@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, Database, X, MessageSquare, ChevronRight, LogOut } from 'lucide-react';
+import { Lock, Database, X, MessageSquare, ChevronRight, LogOut, BrainCircuit } from 'lucide-react';
 import { auth } from '../firebase';
 import { signOut } from 'firebase/auth';
 import { seedDatabase, fetchChatLogs } from '../services/contentService';
@@ -106,17 +106,39 @@ const AdminPanel = ({ isOpen, onClose }) => {
                                 Upload local portfolio data (projects, blogs, expertise) to Firestore. This will overwrite existing collections.
                             </p>
                             {isAuthorized ? (
-                                <button
-                                    onClick={handleSeed}
-                                    disabled={seedingStatus === 'loading'}
-                                    className="w-full bg-rose-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-rose-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                                >
-                                    {seedingStatus === 'loading' ? (
-                                        <>Seeding...</>
-                                    ) : (
-                                        <>⚡ Seed Database</>
-                                    )}
-                                </button>
+                                <div className="space-y-3">
+                                    <button
+                                        onClick={handleSeed}
+                                        disabled={seedingStatus === 'loading'}
+                                        className="w-full bg-rose-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-rose-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                    >
+                                        {seedingStatus === 'loading' ? (
+                                            <>Seeding...</>
+                                        ) : (
+                                            <>⚡ Seed Database</>
+                                        )}
+                                    </button>
+
+                                    <button
+                                        onClick={async () => {
+                                            if (!window.confirm("Generate embeddings for all items? This consumes API quota.")) return;
+                                            setSeedingStatus('loading');
+                                            try {
+                                                const { updateEmbeddings } = await import('../services/contentService');
+                                                await updateEmbeddings();
+                                                alert("Embeddings generated!");
+                                            } catch (e) {
+                                                alert("Error: " + e.message);
+                                            } finally {
+                                                setSeedingStatus(null);
+                                            }
+                                        }}
+                                        disabled={seedingStatus === 'loading'}
+                                        className="w-full bg-neutral-800 border border-neutral-700 text-white font-bold py-3 px-6 rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                    >
+                                        <BrainCircuit size={16} /> Generate Embeddings
+                                    </button>
+                                </div>
                             ) : (
                                 <div className="p-3 bg-red-500/10 border border-red-500/20 rounded text-red-500 text-sm font-bold text-center">
                                     ⛔ Unauthorized Access

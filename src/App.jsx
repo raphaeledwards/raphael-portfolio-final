@@ -28,66 +28,81 @@ import AdminPanel from './components/AdminPanel'; // Import Admin Panel
 // --- DATA ---
 import { PROJECT_ITEMS as INITIAL_PROJECTS, EXPERTISE_AREAS as INITIAL_EXPERTISE, BLOG_POSTS as INITIAL_BLOGS, NAV_LINKS } from './data/portfolioData';
 import { fetchContent } from './services/contentService';
+import { getEmbedding, cosineSimilarity } from './utils/vectorUtils';
 
 
 
 // --- UTILITY: RAG RETRIEVAL ---
 // --- UTILITY: RAG RETRIEVAL ---
-const getContextualData = (query, projects, expertise, blogs) => {
+// --- UTILITY: RAG RETRIEVAL ---
+
+// --- UTILITY: RAG RETRIEVAL ---
+const getContextualData = async (query, projects, expertise, blogs) => {
   if (!query) return "";
 
-  const lowerQuery = query.toLowerCase();
-  const keywords = lowerQuery.split(/\s+/).filter(w => w.length > 2); // Reduced threshold to 2 chars
+  // 1. Try Vector Search first
+  const queryEmbedding = await getEmbedding(query);
 
-  // Scoring Helper
-  const calculateScore = (item, type) => {
+  if (queryEmbedding) {
+    // Collect all items with embeddings
+    const allItems = [
+      ...projects.map(p => ({ type: 'PROJECT', data: p })),
+      ...expertise.map(e => ({ type: 'EXPERTISE', data: e })),
+      ...blogs.map(b => ({ type: 'BLOG', data: b }))
+    ].filter(item => item.data.embedding && Array.isArray(item.data.embedding));
+
+    if (allItems.length > 0) {
+      console.log(`[RAG] Vector search across ${allItems.length} items.`);
+      const scored = allItems.map(item => ({
+        ...item,
+        score: cosineSimilarity(queryEmbedding, item.data.embedding)
+      }));
+
+      // Filter by threshold to remove noise
+      const relevant = scored
+        .filter(item => item.score > 0.45) // Threshold can be tuned
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 5);
+
+      if (relevant.length > 0) {
+        console.log("[RAG] Vector matches found:", relevant.map(r => r.data.title));
+        return relevant.map(match => {
+          const { type, data } = match;
+          if (type === 'PROJECT') return `[PROJECT] ${data.title} (${data.category}): ${data.description}`;
+          if (type === 'EXPERTISE') return `[EXPERTISE] ${data.title}: ${data.description}`;
+          if (type === 'BLOG') return `[BLOG] ${data.title} (${data.date}): ${data.excerpt}`;
+          return "";
+        }).join('\n---\n');
+      }
+    } else {
+      console.log("[RAG] No embeddings found on data items. Falling back to Keywords.");
+    }
+  }
+
+  // 2. Fallback to Keyword Search
+  const lowerQuery = query.toLowerCase();
+  const keywords = lowerQuery.split(/\s+/).filter(w => w.length > 2);
+
+  const calculateScore = (item) => {
     let score = 0;
     const stringifiedItem = JSON.stringify(item).toLowerCase();
-
     keywords.forEach(keyword => {
-      // Title matches are high value
       if (item.title?.toLowerCase().includes(keyword)) score += 10;
-
-      // Category/Tag matches
       if (item.category?.toLowerCase().includes(keyword)) score += 5;
       if (item.tags?.some(tag => tag.toLowerCase().includes(keyword))) score += 5;
-
-      // General content match (low value)
       if (stringifiedItem.includes(keyword)) score += 1;
     });
-
     return score;
   };
 
-  // 1. Search Projects
-  const projectMatches = projects.map(item => ({
-    type: 'PROJECT',
-    data: item,
-    score: calculateScore(item, 'PROJECT')
-  })).filter(match => match.score > 0);
-
-  // 2. Search Expertise
-  const expertiseMatches = expertise.map(item => ({
-    type: 'EXPERTISE',
-    data: item,
-    score: calculateScore(item, 'EXPERTISE')
-  })).filter(match => match.score > 0);
-
-  // 3. Search Blogs
-  const blogMatches = blogs.map(item => ({
-    type: 'BLOG',
-    data: item,
-    score: calculateScore(item, 'BLOG')
-  })).filter(match => match.score > 0);
-
-  // Combine and Sort
-  const allMatches = [...projectMatches, ...expertiseMatches, ...blogMatches]
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 5); // Take top 5 most relevant chunks
+  const allMatches = [
+    ...projects.map(p => ({ type: 'PROJECT', data: p, score: calculateScore(p) })),
+    ...expertise.map(e => ({ type: 'EXPERTISE', data: e, score: calculateScore(e) })),
+    ...blogs.map(b => ({ type: 'BLOG', data: b, score: calculateScore(b) }))
+  ].filter(match => match.score > 0).sort((a, b) => b.score - a.score).slice(0, 5);
 
   if (allMatches.length === 0) return "";
 
-  // Format for LLM
   return allMatches.map(match => {
     const { type, data } = match;
     if (type === 'PROJECT') return `[PROJECT] ${data.title} (${data.category}): ${data.description}`;
@@ -127,9 +142,9 @@ const logChatEntry = async (user, userInput, aiResponse) => {
 // --- COMPONENTS ---
 
 const ICON_MAP = {
-  "Users": Users, // Note: Users is not imported in App.jsx yet, need to check imports
+  "Users": Users,
   "Lock": Lock,
-  "Cloud": Cloud, // Cloud not imported
+  "Cloud": Cloud,
   "BrainCircuit": BrainCircuit
 };
 
@@ -176,7 +191,7 @@ const ChatInterface = ({ user, projects, expertise, blogs }) => {
 
     // 1. RETRIEVAL: Pull context based on the current user input
     // Pass dynamic data to RAG
-    const contextualData = getContextualData(userInput, projects, expertise, blogs);
+    const contextualData = await getContextualData(userInput, projects, expertise, blogs);
 
     // 2. AUGMENTATION: Build the final prompt by combining the persona and the relevant data
     // Use externalSystemPrompt (imported from data file)

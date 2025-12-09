@@ -2,6 +2,7 @@ import { db } from '../firebase';
 import { collection, getDocs, doc, setDoc, writeBatch, query, orderBy, limit } from 'firebase/firestore';
 import { PROJECT_ITEMS, EXPERTISE_AREAS, BLOG_POSTS } from '../data/portfolioData';
 import { Users, Lock, Cloud, BrainCircuit } from 'lucide-react';
+import { getEmbedding } from '../utils/vectorUtils';
 
 // Collection Names
 const COLLECTIONS = {
@@ -77,11 +78,12 @@ export const seedDatabase = async () => {
 
     // Helper to add items to batch
     const addToBatch = (items, collectionName) => {
-        items.forEach(item => {
-            // Use item.id as doc ID if present, else auto-ID
+        items.forEach((item, idx) => {
+            // Use item.id as doc ID if present, else deterministic ID based on index
+            // This ensures re-seeding or embedding updates target the same docs
             const docRef = item.id
                 ? doc(db, collectionName, String(item.id))
-                : doc(collection(db, collectionName));
+                : doc(db, collectionName, `auto_${idx}`);
 
             // Remove icon function from data if present (can't store functions in DB)
             // For Expertise, we store the metadata, but Icons need local mapping
@@ -106,4 +108,73 @@ export const seedDatabase = async () => {
 
     await batch.commit();
     return operationCount;
+};
+
+/**
+ * Updates all items in Firestore with Vector Embeddings.
+ * Iterates through Projects, Expertise, and Blogs.
+ */
+export const updateEmbeddings = async () => {
+    if (!db) throw new Error("Firestore not initialized");
+
+    const collectionsToUpdate = [
+        { name: COLLECTIONS.PROJECTS, data: PROJECT_ITEMS },
+        { name: COLLECTIONS.EXPERTISE, data: EXPERTISE_AREAS },
+        { name: COLLECTIONS.BLOGS, data: BLOG_POSTS }
+    ];
+
+    const batch = writeBatch(db);
+
+    for (const group of collectionsToUpdate) {
+        console.log(`Generating embeddings for ${group.name}...`);
+
+        for (let i = 0; i < group.data.length; i++) {
+            const item = group.data[i];
+
+            let textToEmbed = "";
+            if (group.name === COLLECTIONS.PROJECTS) {
+                textToEmbed = `${item.title}. Category: ${item.category}. Tags: ${item.tags?.join(", ")}. Description: ${item.description}`;
+            } else if (group.name === COLLECTIONS.BLOGS) {
+                textToEmbed = `${item.title}. ${item.excerpt}`;
+            } else {
+                textToEmbed = `${item.title}. ${item.description}`;
+            }
+
+            const embedding = await getEmbedding(textToEmbed);
+            if (embedding) {
+                // Deterministic ID generation to match seedDatabase or existing items
+                let docRef;
+                if (item.id) {
+                    docRef = doc(db, group.name, String(item.id));
+                } else {
+                    docRef = doc(db, group.name, `auto_${i}`);
+                }
+
+                // SECURITY/INTEGRITY FIX:
+                // Instead of just setting the embedding (which creates ghost docs if DB is empty),
+                // we write the FULL object. This ensures the DB is valid and synced with local data.
+
+                // 1. Prepare data (strip non-serializable icon functions)
+                const { icon, ...dataToStore } = item;
+
+                // 2. Re-serialize Icon metadata if present (matching seed logic)
+                if (icon) {
+                    // Use Reference Equality to be safe against minification
+                    if (icon === Users) dataToStore.iconName = "Users";
+                    else if (icon === Lock) dataToStore.iconName = "Lock";
+                    else if (icon === Cloud) dataToStore.iconName = "Cloud";
+                    else if (icon === BrainCircuit) dataToStore.iconName = "BrainCircuit";
+                }
+
+                // 3. Attach Embedding
+                dataToStore.embedding = embedding;
+
+                // 4. Overwrite/Merge
+                batch.set(docRef, dataToStore, { merge: true });
+            }
+        }
+    }
+
+    await batch.commit();
+    return "Embeddings generated and updated.";
 };
