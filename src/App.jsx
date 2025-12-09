@@ -24,12 +24,15 @@ import { systemPrompt as externalSystemPrompt } from './data/resumeContext';
 import Login from './Login'; // Imported external component
 
 // --- DATA ---
-import { PROJECT_ITEMS, EXPERTISE_AREAS, BLOG_POSTS, NAV_LINKS } from './data/portfolioData';
+// --- DATA ---
+import { PROJECT_ITEMS as INITIAL_PROJECTS, EXPERTISE_AREAS as INITIAL_EXPERTISE, BLOG_POSTS as INITIAL_BLOGS, NAV_LINKS } from './data/portfolioData';
+import { fetchContent } from './services/contentService';
 
 
 
 // --- UTILITY: RAG RETRIEVAL ---
-const getContextualData = (query) => {
+// --- UTILITY: RAG RETRIEVAL ---
+const getContextualData = (query, projects, expertise, blogs) => {
   if (!query) return "";
 
   const lowerQuery = query.toLowerCase();
@@ -56,21 +59,21 @@ const getContextualData = (query) => {
   };
 
   // 1. Search Projects
-  const projectMatches = PROJECT_ITEMS.map(item => ({
+  const projectMatches = projects.map(item => ({
     type: 'PROJECT',
     data: item,
     score: calculateScore(item, 'PROJECT')
   })).filter(match => match.score > 0);
 
   // 2. Search Expertise
-  const expertiseMatches = EXPERTISE_AREAS.map(item => ({
+  const expertiseMatches = expertise.map(item => ({
     type: 'EXPERTISE',
     data: item,
     score: calculateScore(item, 'EXPERTISE')
   })).filter(match => match.score > 0);
 
   // 3. Search Blogs
-  const blogMatches = BLOG_POSTS.map(item => ({
+  const blogMatches = blogs.map(item => ({
     type: 'BLOG',
     data: item,
     score: calculateScore(item, 'BLOG')
@@ -125,7 +128,7 @@ const logChatEntry = async (user, userInput, aiResponse) => {
 
 
 // 2. CHAT INTERFACE
-const ChatInterface = ({ user }) => {
+const ChatInterface = ({ user, projects, expertise, blogs }) => {
   const [messages, setMessages] = useState([
     { role: 'assistant', text: `Identity confirmed: ${user?.email || 'Director'}. Accessing neural archives... Hello. I am Raphael's digital twin. Ask me about his architecture philosophy, leadership style, or technical experience.` }
   ]);
@@ -164,7 +167,8 @@ const ChatInterface = ({ user }) => {
     const targetModel = "gemini-2.5-flash";
 
     // 1. RETRIEVAL: Pull context based on the current user input
-    const contextualData = getContextualData(userInput);
+    // Pass dynamic data to RAG
+    const contextualData = getContextualData(userInput, projects, expertise, blogs);
     console.log("🔍 [RAG DEBUG] Retrieved Context:", contextualData); // Added for verification
 
     // 2. AUGMENTATION: Build the final prompt by combining the persona and the relevant data
@@ -257,8 +261,26 @@ const App = () => {
   const [user, setUser] = useState(null);
   const [showChat, setShowChat] = useState(false);
 
-  const categories = ["All", ...new Set(PROJECT_ITEMS.map(item => item.category))];
-  const filteredItems = activeCategory === "All" ? PROJECT_ITEMS : PROJECT_ITEMS.filter(item => item.category === activeCategory);
+  // Dynamic Content State
+  const [projectItems, setProjectItems] = useState(INITIAL_PROJECTS);
+  const [expertiseAreas, setExpertiseAreas] = useState(INITIAL_EXPERTISE);
+  const [blogPosts, setBlogPosts] = useState(INITIAL_BLOGS);
+
+  useEffect(() => {
+    const loadContent = async () => {
+      const projects = await fetchContent('projects', INITIAL_PROJECTS);
+      const expertise = await fetchContent('expertise', INITIAL_EXPERTISE);
+      const blogs = await fetchContent('blogs', INITIAL_BLOGS);
+
+      setProjectItems(projects);
+      setExpertiseAreas(expertise); // Note: Icons might need re-mapping if fetched from DB (where they are just names/strings)
+      setBlogPosts(blogs);
+    };
+    loadContent();
+  }, []);
+
+
+
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 50);
@@ -313,7 +335,7 @@ const App = () => {
           </div>
         </nav>
         <div className="flex-1 flex items-center justify-center p-4">
-          {!user ? <Login onOfflineLogin={handleOfflineLogin} /> : <div className="w-full max-w-6xl mx-auto"><ChatInterface user={user} /></div>}
+          {!user ? <Login onOfflineLogin={handleOfflineLogin} /> : <div className="w-full max-w-6xl mx-auto"><ChatInterface user={user} projects={projectItems} expertise={expertiseAreas} blogs={blogPosts} /></div>}
         </div>
       </div>
     );
@@ -389,9 +411,12 @@ const App = () => {
       <section id="services" className="py-24 bg-neutral-950 border-t border-neutral-900">
         <div className="container mx-auto px-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {EXPERTISE_AREAS.map((area, idx) => (
+            {expertiseAreas.map((area, idx) => (
               <div key={idx} className="group p-8 rounded-xl bg-neutral-900/50 border border-neutral-800 hover:border-rose-500/50 transition-all hover:-translate-y-1">
-                <div className="mb-6 inline-flex p-3 rounded-lg bg-neutral-800 text-rose-500 group-hover:bg-rose-500 group-hover:text-white transition-colors"><area.icon size={24} /></div>
+                <div className="mb-6 inline-flex p-3 rounded-lg bg-neutral-800 text-rose-500 group-hover:bg-rose-500 group-hover:text-white transition-colors">
+                  {/* Handle both icon component or just render a default since DB won't store functions */}
+                  {area.icon ? <area.icon size={24} /> : <Terminal size={24} />}
+                </div>
                 <h3 className="text-xl font-bold mb-3">{area.title}</h3>
                 <p className="text-neutral-400 text-sm leading-relaxed">{area.description}</p>
               </div>
@@ -409,11 +434,11 @@ const App = () => {
               <p className="text-neutral-400 max-w-xl">A selection of strategic initiatives, technical implementations, and organizational transformations.</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              {categories.map(cat => <button key={cat} onClick={() => setActiveCategory(cat)} className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${activeCategory === cat ? 'bg-rose-600 text-white' : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white'}`}>{cat}</button>)}
+              {["All", ...new Set(projectItems.map(item => item.category))].map(cat => <button key={cat} onClick={() => setActiveCategory(cat)} className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${activeCategory === cat ? 'bg-rose-600 text-white' : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white'}`}>{cat}</button>)}
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredItems.map((item) => (
+            {(activeCategory === "All" ? projectItems : projectItems.filter(item => item.category === activeCategory)).map((item) => (
               <div key={item.id} className="group flex flex-col bg-neutral-950 rounded-xl overflow-hidden border border-neutral-800 hover:border-rose-500/30 transition-all cursor-pointer" onClick={() => alert(`Viewing: ${item.title}`)}>
                 <div className="relative h-64 overflow-hidden">
                   <img src={item.image} alt={item.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-80 group-hover:opacity-100" />
@@ -438,7 +463,7 @@ const App = () => {
             <button className="text-rose-500 font-bold hover:text-white transition-colors">View All Posts</button>
           </div>
           <div className="space-y-6">
-            {BLOG_POSTS.map(post => (
+            {blogPosts.map(post => (
               <div key={post.id} className="group block bg-neutral-950 p-8 rounded-xl border border-neutral-800 hover:border-rose-500/40 transition-all cursor-pointer">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-3">
                   <h3 className="text-xl font-bold text-white group-hover:text-rose-500 transition-colors">{post.title}</h3>
