@@ -70,8 +70,10 @@ const ChatInterface = ({ user, projects, expertise, blogs, sourceCodes, onClose,
             baseContext += "\n\n[MODE: DEVELOPER] You are now in 'Code Archaeologist' mode. You have access to the actual source code of this application. When answering, cite specific files and lines of code if provided in the context. Explain the architecture and logic like a senior principal engineer conducting a code walkthrough. Be technical, precise, and transparent.";
         }
 
-        // Inject Confidence Instructions if low
-        if (confidence < 0.5) {
+        // Inject Confidence Instructions
+        if (confidence < 0.3) {
+            baseContext += `\n\n[SYSTEM NOTE: CRITICAL - VERY LOW CONFIDENCE (${Math.round(confidence * 100)}%)] The retrieved context is TOO WEAK to answer accurately. DO NOT attempt to answer or hallucinate. You MUST apologize and explicitly direct the user to email Raphael directly for this specific information.`;
+        } else if (confidence < 0.5) {
             baseContext += `\n\n[SYSTEM NOTE: LOW CONFIDENCE (${Math.round(confidence * 100)}%)] The retrieved context is not very strong for this query. Use the term "I'm about ${Math.round(confidence * 100)}% sure on this" or "Raphael might want to clarify" to manage expectations.`;
         }
 
