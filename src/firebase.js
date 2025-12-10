@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth"; // Added missing imports
-import { getFirestore } from "firebase/firestore"; // Added for RAG logging/Analytics
-import { getAnalytics } from "firebase/analytics"; // Added for Analytics
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
+import { getAnalytics, isSupported } from "firebase/analytics";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -18,6 +18,7 @@ let app;
 let auth;
 let db;
 let googleProvider;
+let analytics;
 
 try {
   // Simple validation to prevent crash if env vars are missing
@@ -27,23 +28,29 @@ try {
   auth = getAuth(app);
   db = getFirestore(app);
   googleProvider = new GoogleAuthProvider();
+
+  // Initialize Analytics only if supported and configured
+  if (firebaseConfig.measurementId) {
+    isSupported().then(yes => yes && (analytics = getAnalytics(app))).catch(() => { });
+  }
+
 } catch (error) {
   console.error("Firebase Initialization Error:", error);
   // Export dummy objects to prevent import errors in App.jsx
   auth = { currentUser: null };
   db = null;
+  googleProvider = null;
 }
 
 export { auth, db, googleProvider };
 
-// Only init analytics if supported (optional safety check)
-let analytics;
-try {
-  analytics = getAnalytics(app);
-} catch (e) {
-  console.warn("Analytics not supported in this environment");
-}
+// Helper functions (Robust exports)
+export const signInWithGoogle = async () => {
+  if (!auth || !googleProvider) throw new Error("Firebase Auth not initialized");
+  return signInWithPopup(auth, googleProvider);
+};
 
-// Helper functions
-export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
-export const logout = () => signOut(auth);
+export const logout = async () => {
+  if (!auth) return;
+  return signOut(auth);
+};

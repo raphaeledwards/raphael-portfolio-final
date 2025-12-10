@@ -5,20 +5,34 @@ const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 // Initialize GenAI
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
+// Simple in-memory cache to prevent redundant API calls
+const embeddingCache = new Map();
+
 /**
  * Generates a vector embedding for the given text using Gemini.
  * Uses the 'embedding-001' or 'text-embedding-004' model.
+ * Caches results to improve performance.
  * @param {string} text 
  * @returns {Promise<number[]>} The embedding vector
  */
 export const getEmbedding = async (text) => {
     if (!text || !GEMINI_API_KEY) return null;
 
+    // Check Cache
+    if (embeddingCache.has(text)) {
+        console.debug('⚡ Embedding Cache Hit');
+        return embeddingCache.get(text);
+    }
+
     try {
         const model = genAI.getGenerativeModel({ model: "text-embedding-004" });
         const result = await model.embedContent(text);
-        const embedding = result.embedding;
-        return embedding.values;
+        const embedding = result.embedding.values;
+
+        // Update Cache
+        embeddingCache.set(text, embedding);
+
+        return embedding;
     } catch (error) {
         console.error("Error generating embedding:", error);
         // Fallback or rethrow depending on desired strictness

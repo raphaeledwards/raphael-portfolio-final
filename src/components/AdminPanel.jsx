@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, Database, X, MessageSquare, ChevronRight, LogOut, BrainCircuit } from 'lucide-react';
+import { Lock, Database, X, MessageSquare, ChevronRight, LogOut, BrainCircuit, Loader2 } from 'lucide-react';
 import { auth } from '../firebase';
 import { signOut } from 'firebase/auth';
 import { seedDatabase, fetchChatLogs, indexSourceCode } from '../services/contentService';
@@ -8,8 +8,12 @@ const AdminPanel = ({ isOpen, onClose }) => {
     const [seedingStatus, setSeedingStatus] = useState(null); // 'loading', 'success', 'error'
     const [activeTab, setActiveTab] = useState('database');
     const [chatLogs, setChatLogs] = useState([]);
+    const [isLoadingLogs, setIsLoadingLogs] = useState(false);
     const [expandedLog, setExpandedLog] = useState(null);
-    const ALLOWED_EMAILS = ["raphaeledwards@gmail.com"];
+
+    // Get allowed emails from Env or default
+    const envEmails = import.meta.env.VITE_ADMIN_EMAILS || "raphaeledwards@gmail.com";
+    const ALLOWED_EMAILS = envEmails.split(',').map(e => e.trim());
 
     // Check if user is authorized
     const isAuthorized = auth.currentUser && ALLOWED_EMAILS.includes(auth.currentUser.email);
@@ -17,7 +21,10 @@ const AdminPanel = ({ isOpen, onClose }) => {
     // Fetch logs on tab switch
     React.useEffect(() => {
         if (isOpen && activeTab === 'logs' && isAuthorized) {
-            fetchChatLogs().then(setChatLogs);
+            setIsLoadingLogs(true);
+            fetchChatLogs()
+                .then(setChatLogs)
+                .finally(() => setIsLoadingLogs(false));
         }
     }, [isOpen, activeTab, isAuthorized]);
 
@@ -172,6 +179,11 @@ const AdminPanel = ({ isOpen, onClose }) => {
                             {!isAuthorized ? (
                                 <div className="p-3 bg-red-500/10 border border-red-500/20 rounded text-red-500 text-sm font-bold text-center">
                                     ⛔ Unauthorized Access
+                                </div>
+                            ) : isLoadingLogs ? (
+                                <div className="flex flex-col items-center justify-center py-8 text-neutral-500 gap-2">
+                                    <Loader2 className="animate-spin" size={24} />
+                                    <span className="text-xs font-bold uppercase tracking-wider">Loading History...</span>
                                 </div>
                             ) : chatLogs.length === 0 ? (
                                 <p className="text-neutral-500 text-center py-8">No logs found.</p>

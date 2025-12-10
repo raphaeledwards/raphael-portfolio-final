@@ -5,11 +5,17 @@ import { auth } from './firebase';
 
 const Login = ({ onOfflineLogin }) => {
   const handleLogin = async () => {
-    if (!auth) {
-      console.warn("Auth not initialized. Check firebase configuration.");
-      // Fallback if auth is totally missing
-      if (onOfflineLogin) onOfflineLogin();
-      return;
+    // 1. Safety Check: If auth failed to init (e.g. env vars missing), prevent crash
+    if (!auth || !auth.currentUser) {
+      // Note: auth itself might be the dummy object { currentUser: null } from firebase.js catch block
+      // We need to check if it's a real Auth instance. Real instances have methods.
+      if (!auth || !auth.signOut) {
+        console.warn("Auth system inactive.");
+        alert("Authentication service is currently unavailable. Please check configuration.");
+        // Fallback for demo/dev if desired
+        if (onOfflineLogin) onOfflineLogin();
+        return;
+      }
     }
 
     try {
@@ -19,7 +25,11 @@ const Login = ({ onOfflineLogin }) => {
       console.error("Login failed:", error);
       if (error.code === 'auth/popup-blocked' || error.code === 'auth/operation-not-supported-in-this-environment') {
         // Fallback for restrictive environments
-        await signInAnonymously(auth);
+        try {
+          await signInAnonymously(auth);
+        } catch (anonError) {
+          alert(`Login failed: ${anonError.message}`);
+        }
       } else {
         alert(`Authentication failed: ${error.message}`);
       }

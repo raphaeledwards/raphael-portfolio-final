@@ -14,6 +14,30 @@ const COLLECTIONS = {
 };
 
 /**
+ * Helper to serialize data for Firestore.
+ * Handles removing non-serializable objects (functions) and mapping icons.
+ */
+const serializeFirestoreData = (item, embedding = null) => {
+    // 1. Prepare data (strip non-serializable icon functions)
+    const { icon, ...dataToStore } = item;
+
+    // 2. Re-serialize Icon metadata if present
+    if (icon) {
+        if (icon === Users) dataToStore.iconName = "Users";
+        else if (icon === Lock) dataToStore.iconName = "Lock";
+        else if (icon === Cloud) dataToStore.iconName = "Cloud";
+        else if (icon === BrainCircuit) dataToStore.iconName = "BrainCircuit";
+    }
+
+    // 3. Attach Embedding if provided
+    if (embedding) {
+        dataToStore.embedding = embedding;
+    }
+
+    return dataToStore;
+};
+
+/**
  * Fetches data from a Firestore collection.
  * Returns local fallback data if DB is empty or fails.
  */
@@ -82,23 +106,11 @@ export const seedDatabase = async () => {
     const addToBatch = (items, collectionName) => {
         items.forEach((item, idx) => {
             // Use item.id as doc ID if present, else deterministic ID based on index
-            // This ensures re-seeding or embedding updates target the same docs
             const docRef = item.id
                 ? doc(db, collectionName, String(item.id))
                 : doc(db, collectionName, `auto_${idx}`);
 
-            // Remove icon function from data if present (can't store functions in DB)
-            // For Expertise, we store the metadata, but Icons need local mapping
-            const { icon, ...dataToStore } = item;
-
-            // Serialize Icon if present
-            if (icon) {
-                if (icon === Users) dataToStore.iconName = "Users";
-                else if (icon === Lock) dataToStore.iconName = "Lock";
-                else if (icon === Cloud) dataToStore.iconName = "Cloud";
-                else if (icon === BrainCircuit) dataToStore.iconName = "BrainCircuit";
-            }
-
+            const dataToStore = serializeFirestoreData(item);
             batch.set(docRef, dataToStore);
             operationCount++;
         });
@@ -157,26 +169,10 @@ export const updateEmbeddings = async () => {
                     docRef = doc(db, group.name, `auto_${i}`);
                 }
 
-                // SECURITY/INTEGRITY FIX:
-                // Instead of just setting the embedding (which creates ghost docs if DB is empty),
-                // we write the FULL object. This ensures the DB is valid and synced with local data.
+                // Use helper to serialize and attach embedding
+                const dataToStore = serializeFirestoreData(item, embedding);
 
-                // 1. Prepare data (strip non-serializable icon functions)
-                const { icon, ...dataToStore } = item;
-
-                // 2. Re-serialize Icon metadata if present (matching seed logic)
-                if (icon) {
-                    // Use Reference Equality to be safe against minification
-                    if (icon === Users) dataToStore.iconName = "Users";
-                    else if (icon === Lock) dataToStore.iconName = "Lock";
-                    else if (icon === Cloud) dataToStore.iconName = "Cloud";
-                    else if (icon === BrainCircuit) dataToStore.iconName = "BrainCircuit";
-                }
-
-                // 3. Attach Embedding
-                dataToStore.embedding = embedding;
-
-                // 4. Overwrite/Merge
+                // Overwrite/Merge
                 batch.set(docRef, dataToStore, { merge: true });
             }
         }
