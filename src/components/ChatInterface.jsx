@@ -3,6 +3,7 @@ import { Terminal, ChevronRight, MapPin, Linkedin, Globe, Mail, Menu, X as Close
 import ReactMarkdown from 'react-markdown';
 import { systemPrompt as externalSystemPrompt } from '../data/resumeContext';
 import { getContextualData, logChatEntry, SECTION_SUGGESTIONS, DEV_SUGGESTIONS } from '../utils/chatUtils';
+import { ABOUT_ME } from '../data/portfolioData';
 
 // 2. GEMINI API KEY
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
@@ -58,28 +59,36 @@ const ChatInterface = ({ user, projects, expertise, blogs, sourceCodes, onClose,
         const targetModel = "gemini-2.5-flash";
 
         // 2. AUGMENTATION: Build the final prompt by combining the persona and the relevant data
-        // Use externalSystemPrompt (imported from data file)
-        let baseContext = typeof externalSystemPrompt !== 'undefined' ? externalSystemPrompt : "You are a helpful assistant.";
 
         // 1. RETRIEVAL: Pull context based on the current user input
-        // Pass dynamic data to RAG, including the baseContext for confidence scoring
-        const { content: contextualData, confidence } = await getContextualData(userInput, projects, expertise, blogs, sourceCodes, isDevMode, baseContext);
+        // Pass dynamic data to RAG, including the ABOUT_ME data
+        const { content: contextualData, confidence } = await getContextualData(userInput, projects, expertise, blogs, sourceCodes, isDevMode, externalSystemPrompt, ABOUT_ME);
 
-        // Inject Developer Mode Persona
+        // SYSTEM PROMPT CONSTRUCTION (V2 - Strict & Direct)
+        let baseInstructions = `You are the AI Assistant for Raphael Edwards' portfolio. Your goal is to answer the user's question accurately based ONLY on the provided context.
+        
+        RULES:
+        1. DO NOT Roleplay as a "Digital Twin" or give long introductions.
+        2. Answer the question DIRECTLY and CONCISELY.
+        3. If the context contains a Code Snippet, explain it like a Senior Engineer.
+        4. If the context contains Biography/Philosophy context, use it to answer personal questions.
+        5. If the context is empty or irrelevant, politely state you do not have that information.
+        `;
+
+        // Inject Developer Mode Persona override if active
         if (isDevMode) {
-            baseContext += "\n\n[MODE: DEVELOPER] You are now in 'Code Archaeologist' mode. You have access to the actual source code of this application. When answering, cite specific files and lines of code if provided in the context. Explain the architecture and logic like a senior principal engineer conducting a code walkthrough. Be technical, precise, and transparent.";
+            baseInstructions += "\n[MODE: DEVELOPER] You are text-mining source code. Be extremely technical. Cite filenames and line logic.";
         }
 
         // Inject Confidence Instructions
         if (confidence < 0.3) {
-            baseContext += `\n\n[SYSTEM NOTE: CRITICAL - VERY LOW CONFIDENCE (${Math.round(confidence * 100)}%)] The retrieved context is TOO WEAK to answer accurately. DO NOT attempt to answer or hallucinate. You MUST apologize and explicitly direct the user to email Raphael directly for this specific information.`;
-        } else if (confidence < 0.5) {
-            baseContext += `\n\n[SYSTEM NOTE: LOW CONFIDENCE (${Math.round(confidence * 100)}%)] The retrieved context is not very strong for this query. Use the term "I'm about ${Math.round(confidence * 100)}% sure on this" or "Raphael might want to clarify" to manage expectations.`;
+            baseInstructions += `\n[WARNING: LOW CONFIDENCE] The retrieved data is weak. Warn the user you are unsure.`;
         }
 
         const finalSystemPrompt = contextualData
-            ? `${baseContext}\n\n[SYSTEM INJECTION: RELEVANT DATA FOUND]\nUse the following specific project details to answer the user's question:\n${contextualData}`
-            : baseContext; // Fallback to generic persona if no specific keywords match
+            ? `${baseInstructions}\n\n=== RETRIEVED CONTEXT ===\n${contextualData}\n\n=== USER QUESTION ===\n${userInput}`
+            : `You are the AI Assistant. The user asked a question, but you have NO internal information to answer it.\n\n=== USER QUESTION ===\n${userInput}\n\nINSTRUCTION:\n1. State clearly: "I don't have specific information about that in my database."\n2. DO NOT try to guess or hallucinate.\n3. DO NOT introduce yourself or ask "How can I help?". Just answer that you don't know.\n4. If it seems like a general tech question (not specific to Raphael), you may answer it generally, but preface it with "In general..."`;
+
 
         let aiResponse = "I'm having trouble connecting right now.";
 

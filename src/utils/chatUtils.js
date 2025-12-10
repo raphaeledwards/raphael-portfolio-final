@@ -24,126 +24,104 @@ export const DEV_SUGGESTIONS = [
 const STOP_WORDS = ["what", "where", "when", "who", "how", "your", "the", "and", "for", "with", "that", "this", "from", "have", "about", "tell", "show", "give"];
 
 // --- UTILITY: RAG RETRIEVAL ---
-export const getContextualData = async (query, projects = [], expertise = [], blogs = [], sourceCodes = [], isDevMode = false, systemContext = "") => {
+// --- UTILITY: RAG RETRIEVAL (STRICT SEARCH V2) ---
+export const getContextualData = async (query, projects = [], expertise = [], blogs = [], sourceCodes = [], isDevMode = false, systemContext = "", aboutMe = null) => {
     if (!query) return { content: "", confidence: 0 };
 
     const lowerQuery = query.toLowerCase();
 
-    // 0. Sensitive Topic Interceptor (Prevents Hallucination on Private Data)
+    // 0. Sensitive Topic Interceptor
     const SENSITIVE_PHRASES = ["consulting rate", "consulting fee", "hourly rate", "salary", "how much do you charge", "your rate", "cost of services"];
     if (SENSITIVE_PHRASES.some(phrase => lowerQuery.includes(phrase))) {
         return {
-            content: "SYSTEM_INJECTION: The user is asking for private financial information (rates/fees/salary). You MUST explicitly REFUSE to provide any numbers. State that your security clearance does not permit discussing financial details and direct them to email Raphael directly.",
+            content: "SYSTEM_INJECTION: The user is asking for private financial information. You must politely refuse and direct them to email Raphael.",
             confidence: 1.0
         };
     }
 
-    // 1. Try Vector Search first
-    const queryEmbedding = await getEmbedding(query);
+    // 1. Prepare Searchable Documents
+    // We flatten everything into a standard format for the search engine
+    let documents = [
+        ...projects.map(p => ({ type: 'PROJECT', ...p })),
+        ...expertise.map(e => ({ type: 'EXPERTISE', ...e })),
+        ...blogs.map(b => ({ type: 'BLOG', ...b })),
+    ];
 
-    if (queryEmbedding) {
-        // Collect all items with embeddings, conditionally including code
-        const allItems = [
-            ...projects.map(p => ({ type: 'PROJECT', data: p })),
-            ...expertise.map(e => ({ type: 'EXPERTISE', data: e })),
-            ...blogs.map(b => ({ type: 'BLOG', data: b })),
-            ...(isDevMode ? sourceCodes.map(s => ({ type: 'CODE', data: s })) : [])
-        ].filter(item => item.data.embedding && Array.isArray(item.data.embedding));
-
-        if (allItems.length > 0) {
-            if (isDevMode) console.log(`[RAG] Vector search across ${allItems.length} items.`);
-
-            let relevant = [];
-            try {
-                const scored = allItems.map(item => ({
-                    ...item,
-                    score: cosineSimilarity(queryEmbedding, item.data.embedding)
-                }));
-
-                // Filter by threshold to remove noise
-                relevant = scored
-                    .filter(item => item.score > 0.45) // Threshold can be tuned
-                    .sort((a, b) => b.score - a.score)
-                    .slice(0, isDevMode ? 3 : 5); // Fewer items if code (as code is large)
-
-            } catch (err) {
-                console.error("[RAG] Error during vector scoring:", err);
-                // Fallback to empty relevant to continue to keyword search if vector fails
-            }
-
-            if (relevant.length > 0) {
-                if (isDevMode) console.log("[RAG] Vector matches found:", relevant.map(r => r.data.title));
-                const highestScore = relevant[0].score;
-                const content = relevant.map(match => {
-                    const { type, data } = match;
-                    if (type === 'PROJECT') return `[PROJECT] ${data.title} (${data.category}): ${data.description}`;
-                    if (type === 'EXPERTISE') return `[EXPERTISE] ${data.title}: ${data.description}`;
-                    if (type === 'BLOG') return `[BLOG] ${data.title} (${data.date}): ${data.excerpt}`;
-                    if (type === 'CODE') return `[SOURCE CODE - ${data.title}]\n${data.description}\n\nCONTENT:\n${data.content}`;
-                    return "";
-                }).join('\n---\n');
-                return { content, confidence: highestScore };
-            }
-        } else {
-            if (isDevMode) console.log("[RAG] No embeddings found on data items. Falling back to Keywords.");
-        }
+    // Add About Me Data (if provided)
+    if (aboutMe) {
+        documents.push({ type: 'ABOUT', title: "About Raphael Edwards", ...aboutMe });
     }
 
-    // 2. Fallback to Keyword Search (Code excluded for now in keyword search to keep it simple)
-    // 2. Fallback to Keyword Search (Code excluded for now in keyword search to keep it simple)
-    // lowerQuery is already defined above
-    const keywords = lowerQuery.split(/\s+/).filter(w => w.length > 2);
+    // Add Code (Only in Dev Mode or if query explicitly asks for code)
+    if (isDevMode) {
+        documents = [...documents, ...sourceCodes.map(s => ({ type: 'CODE', ...s }))];
+    } else if (lowerQuery.includes('code') || lowerQuery.includes('function') || lowerQuery.includes('component')) {
+        // Auto-include code if user asks for it even outside dev mode (optional, but good for UX)
+        documents = [...documents, ...sourceCodes.map(s => ({ type: 'CODE', ...s }))];
+    }
 
-    const calculateScore = (item) => {
+    // 2. Strict Keyword Search Engine
+    // "Vector" means "Vector". Fuzzy matching was the root cause of previous failures.
+    const keywords = lowerQuery.replace(/[?.,!]/g, '').split(/\s+/).filter(w => w.length > 2 && !STOP_WORDS.includes(w));
+
+    const scoredDocs = documents.map(doc => {
         let score = 0;
-        const stringifiedItem = JSON.stringify(item).toLowerCase();
-        keywords.forEach(keyword => {
-            if (item.title?.toLowerCase().includes(keyword)) score += 10;
-            if (item.category?.toLowerCase().includes(keyword)) score += 5;
-            if (item.tags?.some(tag => tag.toLowerCase().includes(keyword))) score += 5;
-            if (stringifiedItem.includes(keyword)) score += 1;
+        const title = doc.title?.toLowerCase() || "";
+        const desc = doc.description?.toLowerCase() || "";
+        const content = doc.content?.toLowerCase() || "";
+        const tags = (doc.tags || []).join(' ').toLowerCase();
+
+        // Special logic: Flatten objects like "bio" or "philosophy" for ABOUT type
+        const aboutContent = doc.type === 'ABOUT' ? (doc.bio + " " + doc.leadershipPhilosophy + " " + doc.technicalBackground).toLowerCase() : "";
+
+        keywords.forEach(word => {
+            // CRITICAL: Title matches are worth 100x more. 
+            // This ensures "Vector Utils" > "Connected Vehicle" for query "Vector"
+            if (title.includes(word)) score += 50;
+
+            // Content matches
+            if (desc.includes(word)) score += 5;
+            if (content.includes(word)) score += 5;
+            if (tags.includes(word)) score += 5;
+            if (aboutContent.includes(word)) score += 10; // Boost bio matches
         });
-        return score;
-    };
 
-    const allMatches = [
-        ...projects.map(p => ({ type: 'PROJECT', data: p, score: calculateScore(p) })),
-        ...expertise.map(e => ({ type: 'EXPERTISE', data: e, score: calculateScore(e) })),
-        ...blogs.map(b => ({ type: 'BLOG', data: b, score: calculateScore(b) })),
-        ...(isDevMode ? sourceCodes.map(s => ({ type: 'CODE', data: s, score: calculateScore(s) })) : [])
-    ].filter(match => match.score > 0).sort((a, b) => b.score - a.score).slice(0, 5);
-
-    if (allMatches.length === 0) return { content: "", confidence: 0.1 }; // Low confidence fallback
-
-    // Normalize keyword score roughly (max expected score ~30 for a good match: Title(10) + Cat(5) + Tag(5) + Content matches)
-    let highestScore = Math.min(allMatches[0].score / 30, 0.9);
-
-    // 3. System Context Boost (Core Identity Check)
-    // If the query matches the static system prompt (leadership, philosophy, etc.), we should be confident.
-    if (systemContext) {
-        const systemKeywords = keywords.filter(k =>
-            !STOP_WORDS.includes(k.toLowerCase()) &&
-            systemContext.toLowerCase().includes(k)
-        );
-
-        if (systemKeywords.length >= 1) {
-            if (isDevMode) console.log(`[RAG] System Prompt match found for keywords: ${systemKeywords.join(', ')}`);
-            // Boost confidence if we hit core identity topics, even if no specific "document" was returned.
-            // We return the found RAG content (or empty), but with a boosted confidence score.
-            highestScore = Math.max(highestScore, 0.85);
+        // Boost Source Code in Dev Mode if keywords match
+        if (doc.type === 'CODE' && isDevMode && score > 0) {
+            score += 20; // Bias towards code in Dev Mode
         }
+
+        return { ...doc, score };
+    });
+
+    // 3. Filter and Sort
+    // We only take high quality matches.
+    const relevantDocs = scoredDocs
+        .filter(doc => doc.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 4); // Top 4 is enough for context window
+
+    // 4. Format Output
+    if (relevantDocs.length === 0) {
+        return { content: "", confidence: 0 };
     }
 
-    const content = allMatches.map(match => {
-        const { type, data } = match;
-        if (type === 'PROJECT') return `[PROJECT] ${data.title} (${data.category}): ${data.description}`;
-        if (type === 'EXPERTISE') return `[EXPERTISE] ${data.title}: ${data.description}`;
-        if (type === 'BLOG') return `[BLOG] ${data.title} (${data.date}): ${data.excerpt}`;
-        if (type === 'CODE') return `[SOURCE CODE - ${data.title}]\n${data.description}\n\nCONTENT:\n${data.content}`;
+    const formattedContent = relevantDocs.map(doc => {
+        if (doc.type === 'PROJECT') return `[PROJECT: ${doc.title}]\n${doc.description}\nTechnolgies: ${doc.tags?.join(', ')}`;
+        if (doc.type === 'EXPERTISE') return `[EXPERTISE: ${doc.title}]\n${doc.description}`;
+        if (doc.type === 'BLOG') return `[BLOG: ${doc.title}]\n${doc.excerpt}\n${doc.content?.slice(0, 300)}...`; // Snippet only for blogs unless very relevant
+        if (doc.type === 'CODE') return `[SOURCE CODE: ${doc.title}]\n${doc.description}\n---CODE START---\n${doc.content}\n---CODE END---`;
+        if (doc.type === 'ABOUT') return `[BIOGRAPHY]\nBio: ${doc.bio}\nPhilosophy: ${doc.leadershipPhilosophy}\nTechnical Background: ${doc.technicalBackground}`; // Full context for bio
         return "";
-    }).join('\n---\n');
+    }).join('\n\n------------------------\n\n');
 
-    return { content, confidence: highestScore };
+    // Simple confidence calculation
+    const highestScore = relevantDocs[0].score;
+    let confidence = 0.5;
+    if (highestScore > 40) confidence = 0.9;
+    else if (highestScore > 10) confidence = 0.7;
+
+    return { content: formattedContent, confidence };
 };
 
 // --- UTILITY: LOGGING ---

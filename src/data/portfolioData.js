@@ -52,4 +52,14 @@ export const BLOG_POSTS = [
     }
 ];
 
+
+export const ABOUT_ME = {
+    title: "About Raphael J. Edwards",
+    role: "Technology Executive & Services Architect",
+    location: "Boston, MA",
+    bio: `A technology executive with a "builder" mindset. I don't just manage complexity; I architect the strategic programs that scale global success. From web security to enterprise growth, I lead the high-performance teams that deliver measurable business value. Proven by a track record of architecting strategic programs that turn small investments into multi-million dollar recurring revenue loops.`,
+    leadershipPhilosophy: `My core leadership philosophy centers on the belief that while technology is easy, people are hard. I advocate for blameless post-mortems and psychological safety as foundational elements for building resilient teams. I move engineering teams from chaos to clarity by embedding OKR frameworks and encouraging a culture of continuous learning. I believe in orchestrating hybrid human-AI workflows where AI amplifies human creativity rather than replacing it.`,
+    technicalBackground: `My background is rooted in deep technical architecture, specifically in Cloud Computing (AWS, GCP, Azure), Cybersecurity (Zero Trust, Edge Security), and Future Tech (IoT, Connected Vehicles). I have architected secure OTA frameworks for 1M+ vehicles and led large-scale digital transformations involved microservices and cloud-native adoptions.`
+};
+
 export const NAV_LINKS = ["Home", "Projects", "Services", "Blog", "Contact"];
