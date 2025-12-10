@@ -27,6 +27,17 @@ const STOP_WORDS = ["what", "where", "when", "who", "how", "your", "the", "and",
 export const getContextualData = async (query, projects = [], expertise = [], blogs = [], sourceCodes = [], isDevMode = false, systemContext = "") => {
     if (!query) return { content: "", confidence: 0 };
 
+    const lowerQuery = query.toLowerCase();
+
+    // 0. Sensitive Topic Interceptor (Prevents Hallucination on Private Data)
+    const SENSITIVE_PHRASES = ["consulting rate", "consulting fee", "hourly rate", "salary", "how much do you charge", "your rate", "cost of services"];
+    if (SENSITIVE_PHRASES.some(phrase => lowerQuery.includes(phrase))) {
+        return {
+            content: "SYSTEM_INJECTION: The user is asking for private financial information (rates/fees/salary). You MUST explicitly REFUSE to provide any numbers. State that your security clearance does not permit discussing financial details and direct them to email Raphael directly.",
+            confidence: 1.0
+        };
+    }
+
     // 1. Try Vector Search first
     const queryEmbedding = await getEmbedding(query);
 
@@ -79,7 +90,8 @@ export const getContextualData = async (query, projects = [], expertise = [], bl
     }
 
     // 2. Fallback to Keyword Search (Code excluded for now in keyword search to keep it simple)
-    const lowerQuery = query.toLowerCase();
+    // 2. Fallback to Keyword Search (Code excluded for now in keyword search to keep it simple)
+    // lowerQuery is already defined above
     const keywords = lowerQuery.split(/\s+/).filter(w => w.length > 2);
 
     const calculateScore = (item) => {
