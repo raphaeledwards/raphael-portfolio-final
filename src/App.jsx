@@ -43,15 +43,15 @@ const DEV_SUGGESTIONS = [
   "How are the lazy suggestion chips implemented?"
 ];
 
+const STOP_WORDS = ["what", "where", "when", "who", "how", "your", "the", "and", "for", "with", "that", "this", "from", "have", "about", "tell", "show", "give"];
+
 // --- DATA ---
 import { PROJECT_ITEMS as INITIAL_PROJECTS, EXPERTISE_AREAS as INITIAL_EXPERTISE, BLOG_POSTS as INITIAL_BLOGS, NAV_LINKS } from './data/portfolioData';
 import { fetchContent } from './services/contentService';
 import { getEmbedding, cosineSimilarity } from './utils/vectorUtils';
 
-
-
 // --- UTILITY: RAG RETRIEVAL ---
-const getContextualData = async (query, projects, expertise, blogs, sourceCodes = [], isDevMode = false) => {
+const getContextualData = async (query, projects, expertise, blogs, sourceCodes = [], isDevMode = false, systemContext = "") => {
   if (!query) return { content: "", confidence: 0 };
 
   // 1. Try Vector Search first
@@ -122,7 +122,23 @@ const getContextualData = async (query, projects, expertise, blogs, sourceCodes 
   if (allMatches.length === 0) return { content: "", confidence: 0.1 }; // Low confidence fallback
 
   // Normalize keyword score roughly (max expected score ~30 for a good match: Title(10) + Cat(5) + Tag(5) + Content matches)
-  const highestScore = Math.min(allMatches[0].score / 30, 0.9);
+  let highestScore = Math.min(allMatches[0].score / 30, 0.9);
+
+  // 3. System Context Boost (Core Identity Check)
+  // If the query matches the static system prompt (leadership, philosophy, etc.), we should be confident.
+  if (systemContext) {
+    const systemKeywords = keywords.filter(k =>
+      !STOP_WORDS.includes(k.toLowerCase()) &&
+      systemContext.toLowerCase().includes(k)
+    );
+
+    if (systemKeywords.length >= 1) {
+      if (isDevMode) console.log(`[RAG] System Prompt match found for keywords: ${systemKeywords.join(', ')}`);
+      // Boost confidence if we hit core identity topics, even if no specific "document" was returned.
+      // We return the found RAG content (or empty), but with a boosted confidence score.
+      highestScore = Math.max(highestScore, 0.85);
+    }
+  }
 
   const content = allMatches.map(match => {
     const { type, data } = match;
@@ -224,13 +240,13 @@ const ChatInterface = ({ user, projects, expertise, blogs, sourceCodes, onClose,
 
     const targetModel = "gemini-2.5-flash";
 
-    // 1. RETRIEVAL: Pull context based on the current user input
-    // Pass dynamic data to RAG
-    const { content: contextualData, confidence } = await getContextualData(userInput, projects, expertise, blogs, sourceCodes, isDevMode);
-
     // 2. AUGMENTATION: Build the final prompt by combining the persona and the relevant data
     // Use externalSystemPrompt (imported from data file)
     let baseContext = typeof externalSystemPrompt !== 'undefined' ? externalSystemPrompt : "You are a helpful assistant.";
+
+    // 1. RETRIEVAL: Pull context based on the current user input
+    // Pass dynamic data to RAG, including the baseContext for confidence scoring
+    const { content: contextualData, confidence } = await getContextualData(userInput, projects, expertise, blogs, sourceCodes, isDevMode, baseContext);
 
     // Inject Developer Mode Persona
     if (isDevMode) {
@@ -679,7 +695,7 @@ const App = () => {
           />
         )}
       </div>
-    </div >
+    </div>
   );
 };
 
