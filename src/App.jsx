@@ -50,9 +50,11 @@ const App = () => {
       const projects = await fetchContent('projects', INITIAL_PROJECTS);
       const expertise = await fetchContent('expertise', INITIAL_EXPERTISE);
       const blogs = await fetchContent('blogs', INITIAL_BLOGS);
-      // Directly use local manifest for source code to ensure consistent Developer Mode experience
-      // independent of Firestore state.
-      setSourceCodes(SOURCE_CODE_MANIFEST);
+
+      // Fetch source code from Firestore to ensure we have the latest indexed/embedded version.
+      // Fallback to local manifest if not found.
+      const sourceCode = await fetchContent('source_code', SOURCE_CODE_MANIFEST);
+      setSourceCodes(sourceCode);
 
       setProjectItems(projects);
       setExpertiseAreas(expertise); // Note: Icons might need re-mapping if fetched from DB (where they are just names/strings)

@@ -9,9 +9,32 @@ import { ABOUT_ME } from '../data/portfolioData';
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
 
 const ChatInterface = ({ user, projects, expertise, blogs, sourceCodes, onClose, activeSection, onLogout }) => {
-    const [messages, setMessages] = useState([
-        { role: 'assistant', text: `Identity confirmed: ${user?.email || 'Director'}. Accessing neural archives... Hello. I am Raphael's digital twin. Ask me about his architecture philosophy, leadership style, or technical experience.` }
-    ]);
+    const STORAGE_KEY = `chat_history_${user?.uid || 'guest'}`;
+
+    const INITIAL_MESSAGE = { role: 'assistant', text: `Identity confirmed: ${user?.email || 'Director'}. Accessing neural archives... Hello. I am Raphael's digital twin. Ask me about his architecture philosophy, leadership style, or technical experience.` };
+
+    const [messages, setMessages] = useState(() => {
+        try {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            return saved ? JSON.parse(saved) : [INITIAL_MESSAGE];
+        } catch (e) {
+            console.error("Failed to load chat history", e);
+            return [INITIAL_MESSAGE];
+        }
+    });
+
+    // Persist messages
+    useEffect(() => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+    }, [messages, STORAGE_KEY]);
+
+    const handleClearChat = () => {
+        if (window.confirm("Clear chat history?")) {
+            setMessages([INITIAL_MESSAGE]);
+            localStorage.removeItem(STORAGE_KEY);
+        }
+    };
+
     const [inputValue, setInputValue] = useState("");
     const [isTyping, setIsTyping] = useState(false);
     const [isDevMode, setIsDevMode] = useState(false);
@@ -136,6 +159,7 @@ const ChatInterface = ({ user, projects, expertise, blogs, sourceCodes, onClose,
                     <span className="font-mono text-sm text-neutral-400">NEURAL LINK: <span className="text-green-500">ACTIVE</span></span>
                 </div>
                 <div className="flex gap-2">
+                    <button onClick={handleClearChat} className="p-1 hover:bg-neutral-800 rounded text-neutral-400 hover:text-white transition-colors" title="Clear History"><Sparkles size={18} /></button>
                     <button onClick={onLogout} className="p-1 hover:bg-neutral-800 rounded text-neutral-400 hover:text-rose-500 transition-colors" title="Sign Out"><LogOut size={18} /></button>
 
                     <button
