@@ -1,5 +1,5 @@
 import { db } from '../firebase';
-import { collection, getDocs, doc, setDoc, getDoc, writeBatch, query, orderBy, limit } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, getDoc, writeBatch, query, orderBy, limit, increment, updateDoc } from 'firebase/firestore';
 import { PROJECT_ITEMS, EXPERTISE_AREAS, BLOG_POSTS } from '../data/portfolioData';
 import { SOURCE_CODE_MANIFEST } from '../data/sourceCodeManifest';
 import { Users, Lock, Cloud, BrainCircuit } from 'lucide-react';
@@ -263,6 +263,30 @@ export const indexSourceCode = async () => {
     return `Indexed ${SOURCE_CODE_MANIFEST.length} source files.`;
 };
 
+
+/**
+ * Increments the reaction count for a specific item.
+ * @param {string} collectionName - 'projects' or 'blogs'
+ * @param {string} docId - The document ID
+ * @returns {Promise<boolean>} - Success status
+ */
+export const incrementReaction = async (collectionName, docId) => {
+    if (!db) throw new Error("Firestore not initialized");
+
+    // Ensure docId is a string
+    const safeId = String(docId);
+    const docRef = doc(db, collectionName, safeId);
+
+    try {
+        await updateDoc(docRef, {
+            reactionCount: increment(1)
+        });
+        return true;
+    } catch (error) {
+        console.error("Error incrementing reaction:", error);
+        return false;
+    }
+};
 
 /**
  * Diagnostic tool to verify Firestore connectivity.

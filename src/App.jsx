@@ -15,6 +15,7 @@ const ChatInterface = lazy(() => import('./components/ChatInterface'));
 import Modal from './components/Modal'; // Lightweight, keep eager
 import ErrorBoundary from './components/ErrorBoundary'; // NEW IMPORT
 import SEO from './components/SEO'; // SEO Component
+import ReactionButton from './components/ReactionButton'; // Engagement Component
 
 // --- DATA ---
 import { PROJECT_ITEMS as INITIAL_PROJECTS, EXPERTISE_AREAS as INITIAL_EXPERTISE, BLOG_POSTS as INITIAL_BLOGS, NAV_LINKS } from './data/portfolioData';
@@ -50,16 +51,16 @@ const App = () => {
     // Determine source code fallback logic
     // We prioritize Firestore, but if empty/error, we use local manifest.
     const sourceCode = await fetchContent('source_code', SOURCE_CODE_MANIFEST);
-    setSourceCodes(sourceCode);
+    setSourceCodes(sourceCode.map(s => ({ ...s, type: 'source_code' })));
 
     // Other content
     const projects = await fetchContent('projects', INITIAL_PROJECTS);
     const expertise = await fetchContent('expertise', INITIAL_EXPERTISE);
     const blogs = await fetchContent('blogs', INITIAL_BLOGS);
 
-    setProjectItems(projects);
-    setExpertiseAreas(expertise);
-    setBlogPosts(blogs);
+    setProjectItems(projects.map(p => ({ ...p, type: 'project' })));
+    setExpertiseAreas(expertise); // Expertise doesn't use modal/reactions yet
+    setBlogPosts(blogs.map(b => ({ ...b, type: 'blog' })));
   };
 
   useEffect(() => {
@@ -143,6 +144,20 @@ const App = () => {
       case 'blog': return 'Insights & Blog';
       case 'contact': return 'Contact';
       default: return ''; // Default uses full site title
+    }
+  };
+
+  const handleReactionUpdate = (collectionName, docId, newCount) => {
+    // Helper to update specific list
+    const updateList = (list) => list.map(item => item.id === docId ? { ...item, reactionCount: newCount } : item);
+
+    if (collectionName === 'projects') setProjectItems(prev => updateList(prev));
+    if (collectionName === 'blogs') setBlogPosts(prev => updateList(prev));
+    if (collectionName === 'source_code') setSourceCodes(prev => updateList(prev));
+
+    // Update selected item if it matches
+    if (selectedItem && selectedItem.id === docId) {
+      setSelectedItem(prev => ({ ...prev, reactionCount: newCount }));
     }
   };
 
@@ -286,7 +301,17 @@ const App = () => {
                     <span className="text-xs font-bold text-neutral-500 uppercase tracking-wide whitespace-nowrap">{post.date}</span>
                   </div>
                   <p className="text-neutral-400">{post.excerpt}</p>
-                  <div className="mt-4 flex items-center text-sm font-bold text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity">Read Article <ChevronRight size={14} /></div>
+                  <div className="mt-4 flex items-center justify-between">
+                    <div className="text-sm font-bold text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">Read Article <ChevronRight size={14} /></div>
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <ReactionButton
+                        collectionName="blogs"
+                        docId={post.id}
+                        initialCount={post.reactionCount}
+                        onReaction={(newCount) => handleReactionUpdate('blogs', post.id, newCount)}
+                      />
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -355,7 +380,16 @@ const App = () => {
               {selectedItem.category && (
                 <span className="inline-block px-2 py-1 bg-neutral-800 text-rose-500 text-xs font-bold uppercase rounded mb-4">{selectedItem.category}</span>
               )}
-              <p className="whitespace-pre-wrap leading-relaxed">{selectedItem.content || selectedItem.description}</p>
+              <p className="whitespace-pre-wrap leading-relaxed mb-6">{selectedItem.content || selectedItem.description}</p>
+
+              <div className="flex justify-end border-t border-neutral-800 pt-4">
+                <ReactionButton
+                  collectionName={getCollectionName(selectedItem.type)}
+                  docId={selectedItem.id}
+                  initialCount={selectedItem.reactionCount}
+                  onReaction={(newCount) => handleReactionUpdate(getCollectionName(selectedItem.type), selectedItem.id, newCount)}
+                />
+              </div>
             </div>
           )}
         </Modal>
