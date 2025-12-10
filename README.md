@@ -1,16 +1,75 @@
-# React + Vite
+# Raphael J. Edwards - AI-Powered Portfolio
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A cutting-edge portfolio application built with **React**, **Vite**, and **Tailwind CSS**, featuring a custom **RAG (Retrieval-Augmented Generation) AI Assistant** that lets visitors chat with a digital persona of Raphael.
 
-Currently, two official plugins are available:
+## 🚀 Key Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+-   **🤖 RAG AI Assistant**: Uses Google Gemini API to answer questions drawing from vector-embedded context (Resume, Projects, Blog).
+-   **🔐 Secure Admin Panel**: Decoupled administration area for content management.
+-   **⚡ High Performance**: Lazy loading, optimized code splitting, and fast initial paint.
+-   **🛠️ Developer Mode**: "Index Source Code" feature allows the AI to answer technical questions about the codebase itself.
+-   **📱 Fully Responsive**: Premium mobile-first design with smooth animations.
 
-## React Compiler
+## 🛠️ Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+-   **Frontend**: React (Vite), Tailwind CSS, Lucide React (Icons).
+-   **Backend / Serverless**: Firebase (Auth, Firestore).
+-   **AI**: Google Gemini API (Embeddings & Completion).
+-   **Deployment**: Vercel (SPA configured).
 
-## Expanding the ESLint configuration
+## ⚙️ Setup & Installation
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/yourusername/raphael-portfolio-final.git
+    cd raphael-portfolio-final
+    ```
+
+2.  **Install dependencies:**
+    ```bash
+    npm install
+    ```
+
+3.  **Environment Variables:**
+    Create a `.env` file in the root directory. You will need Firebase credentials and a Gemini API key.
+    ```env
+    # Firebase Configuration
+    VITE_FIREBASE_API_KEY=your_api_key
+    VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+    VITE_FIREBASE_PROJECT_ID=your_project_id
+    VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+    VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+    VITE_FIREBASE_APP_ID=your_app_id
+
+    # AI Configuration
+    VITE_GEMINI_API_KEY=your_gemini_api_key
+
+    # Admin Access (Comma separated)
+    VITE_ADMIN_EMAILS=raphaeledwards@gmail.com,other@example.com
+    ```
+
+4.  **Run Locally:**
+    ```bash
+    npm run dev
+    ```
+
+## 🔐 Admin & Content Management
+
+1.  **Access**: Click the lock icon in the footer (or "Admin" in header if logged in via AI chat).
+2.  **Authentication**: Only emails listed in `VITE_ADMIN_EMAILS` can access the panel.
+3.  **Seeding Database**:
+    -   Content is managed locally in `src/data/portfolioData.js`.
+    -   Click **"⚡ Seed Database"** in the Admin Panel to upload this data to Firestore.
+    -   Click **"Generate Embeddings"** to vectorize the data for the AI.
+4.  **Indexing Source Code**:
+    -   Run `npm run build` locally to generate the manifest.
+    -   In Admin Panel, click **"Index Source Code"** to let the AI "read" your latest code.
+
+## 📦 Deployment
+
+This project is configured for **Vercel**.
+-   `vercel.json` handles the SPA rewrite rules.
+-   Ensure you add all Environment Variables to your Vercel Project Settings.
+
+---
+&copy; 2025 Raphael J. Edwards

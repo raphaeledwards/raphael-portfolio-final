@@ -48,22 +48,22 @@ files.forEach((file, index) => {
     // The relative path from src/data to src/components/AdminPanel.jsx is ../components/AdminPanel.jsx
 
     const relativeFromSrc = path.relative(path.join(SRC_DIR, 'data'), file).replace(/\\/g, '/');
-    const importName = `File${index} `;
+    const importName = `File${index}`;
 
-    imports.push(`import ${importName} from './${relativeFromSrc}?raw'; `);
+    imports.push(`import ${importName} from './${relativeFromSrc}?raw';`);
 
     // Create readable title/desc
     const fileName = path.basename(file);
     const relativePathNice = path.relative(SRC_DIR, file).replace(/\\/g, '/');
 
     manifestItems.push(`    {
-    id: 'file_${index}_${fileName.replace(/\./g, '_')}',
+        id: 'file_${index}_${fileName.replace(/\./g, '_')}',
         filePath: 'src/${relativePathNice}',
-            title: '${fileName}',
-                description: 'Source code for src/${relativePathNice}',
-                    category: 'Source Code',
-                        content: ${importName}
-} `);
+        title: '${fileName}',
+        description: 'Source code for src/${relativePathNice}',
+        category: 'Source Code',
+        content: ${importName}
+    }`);
 });
 
 const fileContent = `

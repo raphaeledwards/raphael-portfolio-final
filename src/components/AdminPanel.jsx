@@ -13,7 +13,7 @@ const AdminPanel = ({ isOpen, onClose }) => {
 
     // Get allowed emails from Env or default
     const envEmails = import.meta.env.VITE_ADMIN_EMAILS || "raphaeledwards@gmail.com";
-    const ALLOWED_EMAILS = envEmails.split(',').map(e => e.trim());
+    const ALLOWED_EMAILS = envEmails.split(',').map(e => e.trim()).filter(Boolean); // Filter out empty strings
 
     // Check if user is authorized
     const isAuthorized = auth.currentUser && ALLOWED_EMAILS.includes(auth.currentUser.email);

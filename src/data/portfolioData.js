@@ -17,9 +17,39 @@ export const EXPERTISE_AREAS = [
 ];
 
 export const BLOG_POSTS = [
-    { id: 1, title: "The Human Element in Digital Transformation", date: "Oct 24, 2025", excerpt: "Why technology is only 20% of the challenge when upgrading legacy systems." },
-    { id: 2, title: "Navigating the Edge: Security Implications", date: "Sep 15, 2025", excerpt: "How edge computing is redefining the perimeter and what CISOs need to know." },
-    { id: 3, title: "Leadership in the Age of AI", date: "Aug 02, 2025", excerpt: "Adapting management styles when your team is augmented by intelligent agents." }
+    {
+        id: 1,
+        title: "The Human Element in Digital Transformation",
+        date: "Oct 24, 2025",
+        excerpt: "Why technology is only 20% of the challenge when upgrading legacy systems.",
+        content: `Digital transformation is rarely about the code. In my experience leading large-scale modernizations, the technology stack—whether it's moving to Kubernetes, adopting a microservices architecture, or migrating to the cloud—is the predictable part. The variable that determines success or failure is always human.
+
+        When we ask teams to change how they work, we aren't just swapping tools; we are challenging their mastery. A developer who has spent ten years mastering a legacy monolithic system may feel threatened by a sudden shift to distributed systems they don't yet understand. If leadership fails to bridge this gap with empathy, training, and a clear vision of "what's in it for them," the transformation will hit a wall of silent resistance.
+
+        True success comes from building a culture of continuous learning before the first line of new code is written. It involves identifying internal champions, creating safe spaces for failure, and celebrating the small wins along the way. The goal isn't just a new tech stack; it's a renewed engineering culture that feels empowered, not replaced, by innovation.`
+    },
+    {
+        id: 2,
+        title: "Navigating the Edge: Security Implications",
+        date: "Sep 15, 2025",
+        excerpt: "How edge computing is redefining the perimeter and what CISOs need to know.",
+        content: `The traditional security perimeter is dead. With the rise of Edge Computing and IoT, the "fortress" model—where we protect a central data center with high walls—is no longer viable. We are moving compute power closer to where data is generated, which means our attack surface essentially expands to every connected device, sensor, and gateway in the field.
+
+        Securing the edge requires a fundamental shift to a Zero Trust architecture. We must assume that any node can be compromised at any time. This means implementing rigorous identity verification not just for users, but for devices and workloads. Each interaction must be authenticated, authorized, and encrypted, independent of network location.
+
+        Furthermore, observability becomes critical. You cannot protect what you cannot see. Distributed tracing and real-time anomaly detection at the edge are no longer "nice-to-haves"—they are essential survival mechanisms. As we push logic to the edge, security compliance must be baked into the CI/CD pipeline itself, ensuring that security policy is code, not an afterthought.`
+    },
+    {
+        id: 3,
+        title: "Leadership in the Age of AI",
+        date: "Aug 02, 2025",
+        excerpt: "Adapting management styles when your team is augmented by intelligent agents.",
+        content: `We are entering an era where "team" no longer just refers to humans. With the integration of AI agents into the software development lifecycle, the role of an engineering leader is evolving from purely managing people to orchestrating hybrid human-AI workflows. This shifts the focus from "how do we write this code?" to "how do we define the problem clearly enough for our agents to solve it?"
+
+        The challenge for leaders is to prevent the commoditization of their workforce. AI should be positioned as an amplifier of human creativity, not a replacement for it. This means encouraging engineers to move up the abstraction ladder—focusing on system architecture, user empathy, and complex reasoning, while delegating the boilerplate generation and test writing to AI.
+
+        However, this also introduces new risks. Over-reliance on generated code can lead to a "knowledge gap" where the team no longer understands the systems they maintain. Effective leadership now requires enforcing rigorous code review standards (even for AI code) and ensuring that "human-in-the-loop" isn't just a buzzword, but a structural necessity in critical decision paths.`
+    }
 ];
 
 export const NAV_LINKS = ["Home", "Projects", "Services", "Blog", "Contact"];

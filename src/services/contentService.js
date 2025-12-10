@@ -50,7 +50,7 @@ export const fetchContent = async (collectionName, fallbackData) => {
     try {
         const querySnapshot = await getDocs(collection(db, collectionName));
         if (querySnapshot.empty) {
-            console.log(`[ContentService] Collection ${collectionName} empty. Using fallback.`);
+            console.debug(`[ContentService] Collection ${collectionName} empty. Using fallback.`);
             return fallbackData;
         }
 
@@ -102,9 +102,20 @@ export const seedDatabase = async () => {
     const batch = writeBatch(db);
     let operationCount = 0;
 
+    // Validation Helper
+    const validateItem = (item, type) => {
+        if (!item.title) {
+            console.warn(`[Seed] Skipping invalid ${type} item (missing title):`, item);
+            return false;
+        }
+        return true;
+    };
+
     // Helper to add items to batch
     const addToBatch = (items, collectionName) => {
         items.forEach((item, idx) => {
+            if (!validateItem(item, collectionName)) return;
+
             // Use item.id as doc ID if present, else deterministic ID based on index
             const docRef = item.id
                 ? doc(db, collectionName, String(item.id))
@@ -148,7 +159,7 @@ export const updateEmbeddings = async () => {
             // RATE LIMITING: Add a small delay to avoid hitting API quotas (429 errors)
             // 1000ms delay = max 60 requests per minute, which is safer for free tiers.
             await new Promise(resolve => setTimeout(resolve, 1000));
-            console.log(`Processing item ${i + 1}/${group.data.length}...`);
+            // console.log(`Processing item ${i + 1}/${group.data.length}...`);
 
             let textToEmbed = "";
             if (group.name === COLLECTIONS.PROJECTS) {
