@@ -139,6 +139,7 @@ export const getContextualData = async (query, projects = [], expertise = [], bl
         if (type === 'PROJECT') return `[PROJECT] ${data.title} (${data.category}): ${data.description}`;
         if (type === 'EXPERTISE') return `[EXPERTISE] ${data.title}: ${data.description}`;
         if (type === 'BLOG') return `[BLOG] ${data.title} (${data.date}): ${data.excerpt}`;
+        if (type === 'CODE') return `[SOURCE CODE - ${data.title}]\n${data.description}\n\nCONTENT:\n${data.content}`;
         return "";
     }).join('\n---\n');
 

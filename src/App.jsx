@@ -17,6 +17,7 @@ import ErrorBoundary from './components/ErrorBoundary'; // NEW IMPORT
 
 // --- DATA ---
 import { PROJECT_ITEMS as INITIAL_PROJECTS, EXPERTISE_AREAS as INITIAL_EXPERTISE, BLOG_POSTS as INITIAL_BLOGS, NAV_LINKS } from './data/portfolioData';
+import { SOURCE_CODE_MANIFEST } from './data/sourceCodeManifest';
 import { fetchContent } from './services/contentService';
 
 const ICON_MAP = {
@@ -49,7 +50,7 @@ const App = () => {
       const projects = await fetchContent('projects', INITIAL_PROJECTS);
       const expertise = await fetchContent('expertise', INITIAL_EXPERTISE);
       const blogs = await fetchContent('blogs', INITIAL_BLOGS);
-      const code = await fetchContent('source_code', []);
+      const code = await fetchContent('source_code', SOURCE_CODE_MANIFEST);
 
       setProjectItems(projects);
       setExpertiseAreas(expertise); // Note: Icons might need re-mapping if fetched from DB (where they are just names/strings)
