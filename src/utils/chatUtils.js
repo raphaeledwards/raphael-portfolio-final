@@ -109,7 +109,8 @@ export const getContextualData = async (query, projects = [], expertise = [], bl
     const allMatches = [
         ...projects.map(p => ({ type: 'PROJECT', data: p, score: calculateScore(p) })),
         ...expertise.map(e => ({ type: 'EXPERTISE', data: e, score: calculateScore(e) })),
-        ...blogs.map(b => ({ type: 'BLOG', data: b, score: calculateScore(b) }))
+        ...blogs.map(b => ({ type: 'BLOG', data: b, score: calculateScore(b) })),
+        ...(isDevMode ? sourceCodes.map(s => ({ type: 'CODE', data: s, score: calculateScore(s) })) : [])
     ].filter(match => match.score > 0).sort((a, b) => b.score - a.score).slice(0, 5);
 
     if (allMatches.length === 0) return { content: "", confidence: 0.1 }; // Low confidence fallback
