@@ -267,27 +267,44 @@ export const indexSourceCode = async () => {
 /**
  * Diagnostic tool to verify Firestore connectivity.
  */
+/**
+ * Diagnostic tool to verify Firestore connectivity.
+ */
 export const runDiagnostics = async () => {
     if (!db) throw new Error("Firestore is NOT initialized (db is null). Check .env and firebase.js.");
 
-    console.log("[Diagnostics] Starting write test...");
+    console.log("[Diagnostics] Starting write test with 5s timeout...");
     const testRef = doc(db, 'diagnostics', 'connectivity_test');
 
-    // 1. Write Test
-    await setDoc(testRef, {
-        timestamp: new Date(),
-        status: 'OK',
-        active: true,
-        testId: Math.random().toString(36).substring(7)
-    });
+    // Helper for timeout
+    const timeout = (ms) => new Promise((_, reject) => setTimeout(() => reject(new Error("Generic Timeout")), ms));
 
-    // 2. Read Test
-    console.log("[Diagnostics] Write success. Attempting read...");
-    const docSnap = await getDoc(testRef);
+    try {
+        // 1. Write Test (Race against 5s timeout)
+        await Promise.race([
+            setDoc(testRef, {
+                timestamp: new Date(),
+                status: 'OK',
+                active: true,
+                testId: Math.random().toString(36).substring(7)
+            }),
+            timeout(5000)
+        ]);
 
-    if (docSnap.exists()) {
-        return "✅ SUCCESS: Database is connected and writable! (Read/Write confirmed)";
-    } else {
-        throw new Error("⚠️ WRITE SUCCESS but READ FAILED. Document disappeared immediately.");
+        // 2. Read Test
+        console.log("[Diagnostics] Write success. Attempting read...");
+        const docSnap = await getDoc(testRef);
+
+        if (docSnap.exists()) {
+            return "✅ SUCCESS: Database is connected and writable! (Read/Write confirmed)";
+        } else {
+            throw new Error("⚠️ WRITE SUCCESS but READ FAILED. Document disappeared immediately.");
+        }
+    } catch (error) {
+        console.error("[Diagnostics] Failed:", error);
+        if (error.message === "Generic Timeout" || error.code === 'unavailable') {
+            throw new Error("❌ CONNECTION FAILED: Timed out. \n\nMOST LIKELY CAUSE: The Firestore Database has not been created in the Firebase Console.\n\nPlease go to Firebase Console -> Firestore Database and click 'Create Database'.");
+        }
+        throw error;
     }
 };
