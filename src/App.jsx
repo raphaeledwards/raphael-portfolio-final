@@ -52,7 +52,7 @@ import { getEmbedding, cosineSimilarity } from './utils/vectorUtils';
 
 // --- UTILITY: RAG RETRIEVAL ---
 const getContextualData = async (query, projects, expertise, blogs, sourceCodes = [], isDevMode = false) => {
-  if (!query) return "";
+  if (!query) return { content: "", confidence: 0 };
 
   // 1. Try Vector Search first
   const queryEmbedding = await getEmbedding(query);
@@ -67,7 +67,7 @@ const getContextualData = async (query, projects, expertise, blogs, sourceCodes 
     ].filter(item => item.data.embedding && Array.isArray(item.data.embedding));
 
     if (allItems.length > 0) {
-      console.log(`[RAG] Vector search across ${allItems.length} items. DevMode: ${isDevMode}`);
+      if (isDevMode) console.log(`[RAG] Vector search across ${allItems.length} items.`);
       const scored = allItems.map(item => ({
         ...item,
         score: cosineSimilarity(queryEmbedding, item.data.embedding)
@@ -80,8 +80,9 @@ const getContextualData = async (query, projects, expertise, blogs, sourceCodes 
         .slice(0, isDevMode ? 3 : 5); // Fewer items if code (as code is large)
 
       if (relevant.length > 0) {
-        console.log("[RAG] Vector matches found:", relevant.map(r => r.data.title));
-        return relevant.map(match => {
+        if (isDevMode) console.log("[RAG] Vector matches found:", relevant.map(r => r.data.title));
+        const highestScore = relevant[0].score;
+        const content = relevant.map(match => {
           const { type, data } = match;
           if (type === 'PROJECT') return `[PROJECT] ${data.title} (${data.category}): ${data.description}`;
           if (type === 'EXPERTISE') return `[EXPERTISE] ${data.title}: ${data.description}`;
@@ -89,9 +90,10 @@ const getContextualData = async (query, projects, expertise, blogs, sourceCodes 
           if (type === 'CODE') return `[SOURCE CODE - ${data.title}]\n${data.description}\n\nCONTENT:\n${data.content}`;
           return "";
         }).join('\n---\n');
+        return { content, confidence: highestScore };
       }
     } else {
-      console.log("[RAG] No embeddings found on data items. Falling back to Keywords.");
+      if (isDevMode) console.log("[RAG] No embeddings found on data items. Falling back to Keywords.");
     }
   }
 
@@ -117,15 +119,20 @@ const getContextualData = async (query, projects, expertise, blogs, sourceCodes 
     ...blogs.map(b => ({ type: 'BLOG', data: b, score: calculateScore(b) }))
   ].filter(match => match.score > 0).sort((a, b) => b.score - a.score).slice(0, 5);
 
-  if (allMatches.length === 0) return "";
+  if (allMatches.length === 0) return { content: "", confidence: 0.1 }; // Low confidence fallback
 
-  return allMatches.map(match => {
+  // Normalize keyword score roughly (max expected score ~30 for a good match: Title(10) + Cat(5) + Tag(5) + Content matches)
+  const highestScore = Math.min(allMatches[0].score / 30, 0.9);
+
+  const content = allMatches.map(match => {
     const { type, data } = match;
     if (type === 'PROJECT') return `[PROJECT] ${data.title} (${data.category}): ${data.description}`;
     if (type === 'EXPERTISE') return `[EXPERTISE] ${data.title}: ${data.description}`;
     if (type === 'BLOG') return `[BLOG] ${data.title} (${data.date}): ${data.excerpt}`;
     return "";
   }).join('\n---\n');
+
+  return { content, confidence: highestScore };
 };
 
 // --- UTILITY: LOGGING ---
@@ -219,7 +226,7 @@ const ChatInterface = ({ user, projects, expertise, blogs, sourceCodes, onClose,
 
     // 1. RETRIEVAL: Pull context based on the current user input
     // Pass dynamic data to RAG
-    const contextualData = await getContextualData(userInput, projects, expertise, blogs, sourceCodes, isDevMode);
+    const { content: contextualData, confidence } = await getContextualData(userInput, projects, expertise, blogs, sourceCodes, isDevMode);
 
     // 2. AUGMENTATION: Build the final prompt by combining the persona and the relevant data
     // Use externalSystemPrompt (imported from data file)
@@ -228,6 +235,11 @@ const ChatInterface = ({ user, projects, expertise, blogs, sourceCodes, onClose,
     // Inject Developer Mode Persona
     if (isDevMode) {
       baseContext += "\n\n[MODE: DEVELOPER] You are now in 'Code Archaeologist' mode. You have access to the actual source code of this application. When answering, cite specific files and lines of code if provided in the context. Explain the architecture and logic like a senior principal engineer conducting a code walkthrough. Be technical, precise, and transparent.";
+    }
+
+    // Inject Confidence Instructions if low
+    if (confidence < 0.5) {
+      baseContext += `\n\n[SYSTEM NOTE: LOW CONFIDENCE (${Math.round(confidence * 100)}%)] The retrieved context is not very strong for this query. Use the term "I'm about ${Math.round(confidence * 100)}% sure on this" or "Raphael might want to clarify" to manage expectations.`;
     }
 
     const finalSystemPrompt = contextualData
@@ -257,7 +269,7 @@ const ChatInterface = ({ user, projects, expertise, blogs, sourceCodes, onClose,
       if (data.error) throw new Error(data.error.message);
 
       aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || aiResponse;
-      setMessages(prev => [...prev, { role: 'assistant', text: aiResponse }]);
+      setMessages(prev => [...prev, { role: 'assistant', text: aiResponse, confidence }]);
 
     } catch (error) {
       console.error("Gemini API Error:", error);
@@ -295,7 +307,22 @@ const ChatInterface = ({ user, projects, expertise, blogs, sourceCodes, onClose,
         {messages.map((msg, idx) => (
           <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[80%] p-4 rounded-lg ${msg.role === 'user' ? 'bg-rose-600 text-white' : 'bg-neutral-950 border border-neutral-800 text-neutral-300'}`}>
-              <span className="block text-xs opacity-50 mb-1 mb-2 font-bold uppercase tracking-wider">{msg.role === 'user' ? 'You' : 'Raphael AI'}</span>
+              <span className="block text-xs opacity-50 mb-1 mb-2 font-bold uppercase tracking-wider flex justify-between items-center">
+                <span>{msg.role === 'user' ? 'You' : 'Raphael AI'}</span>
+                {msg.confidence !== undefined && (
+                  <div className="flex items-center gap-1 group relative" title={`Confidence Score: ${Math.round(msg.confidence * 100)}%`}>
+                    <div className="w-16 h-1 bg-neutral-800 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${msg.confidence > 0.65 ? 'bg-green-500' : msg.confidence > 0.45 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                        style={{ width: `${Math.round(msg.confidence * 100)}%` }}
+                      />
+                    </div>
+                    <span className={`text-[10px] ${msg.confidence > 0.65 ? 'text-green-500' : msg.confidence > 0.45 ? 'text-yellow-500' : 'text-red-500'}`}>
+                      {Math.round(msg.confidence * 100)}%
+                    </span>
+                  </div>
+                )}
+              </span>
               <p className="leading-relaxed whitespace-pre-wrap">{msg.text}</p>
             </div>
           </div>
