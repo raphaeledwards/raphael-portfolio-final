@@ -39,6 +39,12 @@ export const getContextualData = async (query, projects = [], expertise = [], bl
         };
     }
 
+    // 0.5 Tech Trigger Detection
+    // Automatically enable "DevMode" retrieval if the user asks technical questions
+    const TECH_TRIGGERS = ["rag", "vector", "embedding", "firestore", "firebase", "react", "component", "architecture", "system prompt", "api", "code", "implementation", "database"];
+    const isTechQuery = TECH_TRIGGERS.some(trigger => lowerQuery.includes(trigger));
+    const shouldIncludeCode = isDevMode || isTechQuery;
+
     // 1. Prepare Searchable Documents
     // We flatten everything into a standard format for the search engine
     let documents = [
@@ -52,17 +58,17 @@ export const getContextualData = async (query, projects = [], expertise = [], bl
         documents.push({ type: 'ABOUT', title: "About Raphael Edwards", ...aboutMe });
     }
 
-    // Add Code (Only in Dev Mode or if query explicitly asks for code)
-    if (isDevMode) {
-        documents = [...documents, ...sourceCodes.map(s => ({ type: 'CODE', ...s }))];
-    } else if (lowerQuery.includes('code') || lowerQuery.includes('function') || lowerQuery.includes('component')) {
-        // Auto-include code if user asks for it even outside dev mode (optional, but good for UX)
+    // Add Code (If explicitly requested via DevMode or implied via Tech Triggers)
+    if (shouldIncludeCode) {
         documents = [...documents, ...sourceCodes.map(s => ({ type: 'CODE', ...s }))];
     }
 
     // 2. Strict Keyword Search Engine
     // "Vector" means "Vector". Fuzzy matching was the root cause of previous failures.
     const keywords = lowerQuery.replace(/[?.,!]/g, '').split(/\s+/).filter(w => w.length > 2 && !STOP_WORDS.includes(w));
+
+    // Explicitly add 'rag' and 'vector' to keywords if they appear in query, to ensure they aren't filtered out by aggressive stop/short word logic (though they are >2 chars).
+    if (lowerQuery.includes('rag')) keywords.push('rag');
 
     const scoredDocs = documents.map(doc => {
         let score = 0;
@@ -86,9 +92,18 @@ export const getContextualData = async (query, projects = [], expertise = [], bl
             if (aboutContent.includes(word)) score += 10; // Boost bio matches
         });
 
-        // Boost Source Code in Dev Mode if keywords match
-        if (doc.type === 'CODE' && isDevMode && score > 0) {
-            score += 20; // Bias towards code in Dev Mode
+        // --- SPECIFIC KNOWLEDGE BOOSTING ---
+
+        // Boost RAG/Vector related source code when asking about RAG
+        if (lowerQuery.includes('rag') || lowerQuery.includes('vector')) {
+            if (title.includes('vectorutils') || title.includes('chatutils')) {
+                score += 100; // Massive boost to ensure these appear
+            }
+        }
+
+        // Boost Source Code in general if it matches keywords
+        if (doc.type === 'CODE' && shouldIncludeCode && score > 0) {
+            score += 20; // Bias towards code in Tech scenarios
         }
 
         return { ...doc, score };
