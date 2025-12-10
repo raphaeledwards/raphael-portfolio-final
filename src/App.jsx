@@ -14,6 +14,7 @@ const ChatInterface = lazy(() => import('./components/ChatInterface'));
 
 import Modal from './components/Modal'; // Lightweight, keep eager
 import ErrorBoundary from './components/ErrorBoundary'; // NEW IMPORT
+import SEO from './components/SEO'; // SEO Component
 
 // --- DATA ---
 import { PROJECT_ITEMS as INITIAL_PROJECTS, EXPERTISE_AREAS as INITIAL_EXPERTISE, BLOG_POSTS as INITIAL_BLOGS, NAV_LINKS } from './data/portfolioData';
@@ -134,8 +135,20 @@ const App = () => {
 
   /* Removed conditional return for Chat to allow overlay */
 
+  const getPageTitle = (section) => {
+    switch (section) {
+      case 'about': return 'About Me';
+      case 'services': return 'Services & Expertise';
+      case 'projects': return 'Featured Projects';
+      case 'blog': return 'Insights & Blog';
+      case 'contact': return 'Contact';
+      default: return ''; // Default uses full site title
+    }
+  };
+
   return (
     <ErrorBoundary>
+      <SEO title={getPageTitle(activeSection)} />
       <div className="min-h-screen bg-neutral-950 text-neutral-100 font-sans selection:bg-rose-600 selection:text-white">
         {/* Navigation */}
         <nav className={`fixed w-full z-50 transition-all duration-300 border-b border-white/5 ${isScrolled ? 'bg-neutral-950/90 backdrop-blur-md py-4 shadow-xl' : 'bg-transparent py-6'}`}>
@@ -209,6 +222,7 @@ const App = () => {
         {/* Services */}
         <section id="services" className="py-24 bg-neutral-950 border-t border-neutral-900">
           <div className="container mx-auto px-6">
+            <h2 className="sr-only">Services & Expertise</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {expertiseAreas.map((area, idx) => (
                 <div key={idx} className="group p-8 rounded-xl bg-neutral-900/50 border border-neutral-800 hover:border-rose-500/50 transition-all hover:-translate-y-1">
