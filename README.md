@@ -45,7 +45,7 @@ A cutting-edge portfolio application built with **React**, **Vite**, and **Tailw
     VITE_GEMINI_API_KEY=your_gemini_api_key
 
     # Admin Access (Comma separated)
-    VITE_ADMIN_EMAILS=raphaeledwards@gmail.com,other@example.com
+    VITE_ADMIN_EMAILS=your_email@example.com,other@example.com
     ```
 
 4.  **Run Locally:**

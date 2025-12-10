@@ -2,7 +2,7 @@
 // This file defines WHO the AI is, how it speaks, and its core values.
 // Detailed project data is now handled dynamically by the RAG system in App.jsx.
 
-const envEmails = import.meta.env.VITE_ADMIN_EMAILS || "raphaeledwards@gmail.com";
+const envEmails = import.meta.env.VITE_ADMIN_EMAILS || "";
 const PRIMARY_EMAIL = envEmails.split(',')[0].trim();
 
 export const systemPrompt = `
