@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Lock, Database, X, MessageSquare, ChevronRight, LogOut, BrainCircuit, Loader2 } from 'lucide-react';
+import { Lock, Database, X, MessageSquare, ChevronRight, LogOut, BrainCircuit, Loader2, Activity } from 'lucide-react';
 import { auth } from '../firebase';
 import { signOut } from 'firebase/auth';
-import { seedDatabase, fetchChatLogs, indexSourceCode, clearChatLogs } from '../services/contentService';
+import { seedDatabase, fetchChatLogs, indexSourceCode, clearChatLogs, runDiagnostics } from '../services/contentService';
 
 const AdminPanel = ({ isOpen, onClose, onRefreshData }) => {
     const [seedingStatus, setSeedingStatus] = useState(null); // 'loading', 'success', 'error'
@@ -61,8 +61,9 @@ const AdminPanel = ({ isOpen, onClose, onRefreshData }) => {
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-                <div className="bg-neutral-800 p-4 flex justify-between items-center border-b border-neutral-700">
+            {/* Expanded Width: max-w-2xl */}
+            <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                <div className="bg-neutral-800 p-4 flex justify-between items-center border-b border-neutral-700 shrink-0">
                     <div className="flex items-center gap-2 font-bold text-white">
                         <Lock className="text-rose-500" size={20} />
                         <span>Admin Console</span>
@@ -72,7 +73,7 @@ const AdminPanel = ({ isOpen, onClose, onRefreshData }) => {
                     </button>
                 </div>
 
-                <div className="flex border-b border-neutral-800">
+                <div className="flex border-b border-neutral-800 shrink-0">
                     <button
                         onClick={() => setActiveTab('database')}
                         className={`flex-1 p-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors ${activeTab === 'database' ? 'text-rose-500 border-b-2 border-rose-500 bg-neutral-900' : 'text-neutral-500 hover:text-white'}`}
@@ -87,7 +88,8 @@ const AdminPanel = ({ isOpen, onClose, onRefreshData }) => {
                     </button>
                 </div>
 
-                <div className="p-6 space-y-6 h-[400px] overflow-y-auto">
+                {/* Expanded Height: h-[600px] */}
+                <div className="p-6 space-y-6 h-[600px] overflow-y-auto">
                     {/* AUTH INFO */}
                     <div className="bg-neutral-950 p-4 rounded-lg border border-neutral-800 shrink-0">
                         <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Authenticated User</h3>
@@ -166,26 +168,27 @@ const AdminPanel = ({ isOpen, onClose, onRefreshData }) => {
                                         <Database size={16} /> Index Source Code (Developer Mode)
                                     </button>
 
-                                    <div className="pt-4 mt-4 border-t border-neutral-800">
-                                        <button
-                                            onClick={async () => {
-                                                setSeedingStatus('loading');
-                                                try {
-                                                    const { runDiagnostics } = await import('../services/contentService');
-                                                    const result = await runDiagnostics();
-                                                    alert(result);
-                                                } catch (e) {
-                                                    alert("DIAGNOSTIC FAILED:\n" + e.message);
-                                                } finally {
-                                                    setSeedingStatus(null);
-                                                }
-                                            }}
-                                            disabled={seedingStatus === 'loading'}
-                                            className="w-full text-xs text-neutral-500 hover:text-rose-500 underline decoration-dotted transition-colors flex items-center justify-center gap-2"
-                                        >
-                                            Run System Diagnostics
-                                        </button>
-                                    </div>
+                                    {/* Updated Diagnostics Button */}
+                                    <button
+                                        onClick={async () => {
+                                            console.log("Running diagnostics...");
+                                            setSeedingStatus('loading');
+                                            try {
+                                                const result = await runDiagnostics();
+                                                console.log("Diagnostics Result:", result);
+                                                alert(result);
+                                            } catch (e) {
+                                                console.error("Diagnostics Error:", e);
+                                                alert("DIAGNOSTIC FAILED:\n" + e.message);
+                                            } finally {
+                                                setSeedingStatus(null);
+                                            }
+                                        }}
+                                        disabled={seedingStatus === 'loading'}
+                                        className="w-full bg-neutral-800 border border-neutral-700 text-rose-500 font-bold py-3 px-6 rounded-lg hover:bg-neutral-700 hover:text-rose-400 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                    >
+                                        <Activity size={16} /> Run System Diagnostics
+                                    </button>
                                 </div>
                             ) : (
                                 <div className="p-3 bg-red-500/10 border border-red-500/20 rounded text-red-500 text-sm font-bold text-center">
@@ -272,7 +275,7 @@ const AdminPanel = ({ isOpen, onClose, onRefreshData }) => {
                     )}
                 </div>
 
-                <div className="bg-neutral-950 p-4 text-center border-t border-neutral-800">
+                <div className="bg-neutral-950 p-4 text-center border-t border-neutral-800 shrink-0">
                     <button onClick={onClose} className="text-sm text-neutral-500 hover:text-neutral-300">Close Panel</button>
                 </div>
             </div>
