@@ -165,6 +165,27 @@ const AdminPanel = ({ isOpen, onClose, onRefreshData }) => {
                                     >
                                         <Database size={16} /> Index Source Code (Developer Mode)
                                     </button>
+
+                                    <div className="pt-4 mt-4 border-t border-neutral-800">
+                                        <button
+                                            onClick={async () => {
+                                                setSeedingStatus('loading');
+                                                try {
+                                                    const { runDiagnostics } = await import('../services/contentService');
+                                                    const result = await runDiagnostics();
+                                                    alert(result);
+                                                } catch (e) {
+                                                    alert("DIAGNOSTIC FAILED:\n" + e.message);
+                                                } finally {
+                                                    setSeedingStatus(null);
+                                                }
+                                            }}
+                                            disabled={seedingStatus === 'loading'}
+                                            className="w-full text-xs text-neutral-500 hover:text-rose-500 underline decoration-dotted transition-colors flex items-center justify-center gap-2"
+                                        >
+                                            Run System Diagnostics
+                                        </button>
+                                    </div>
                                 </div>
                             ) : (
                                 <div className="p-3 bg-red-500/10 border border-red-500/20 rounded text-red-500 text-sm font-bold text-center">

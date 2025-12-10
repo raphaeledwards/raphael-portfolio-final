@@ -1,5 +1,5 @@
 import { db } from '../firebase';
-import { collection, getDocs, doc, setDoc, writeBatch, query, orderBy, limit } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, getDoc, writeBatch, query, orderBy, limit } from 'firebase/firestore';
 import { PROJECT_ITEMS, EXPERTISE_AREAS, BLOG_POSTS } from '../data/portfolioData';
 import { SOURCE_CODE_MANIFEST } from '../data/sourceCodeManifest';
 import { Users, Lock, Cloud, BrainCircuit } from 'lucide-react';
@@ -261,4 +261,33 @@ export const indexSourceCode = async () => {
 
     await batch.commit();
     return `Indexed ${SOURCE_CODE_MANIFEST.length} source files.`;
+};
+
+
+/**
+ * Diagnostic tool to verify Firestore connectivity.
+ */
+export const runDiagnostics = async () => {
+    if (!db) throw new Error("Firestore is NOT initialized (db is null). Check .env and firebase.js.");
+
+    console.log("[Diagnostics] Starting write test...");
+    const testRef = doc(db, 'diagnostics', 'connectivity_test');
+
+    // 1. Write Test
+    await setDoc(testRef, {
+        timestamp: new Date(),
+        status: 'OK',
+        active: true,
+        testId: Math.random().toString(36).substring(7)
+    });
+
+    // 2. Read Test
+    console.log("[Diagnostics] Write success. Attempting read...");
+    const docSnap = await getDoc(testRef);
+
+    if (docSnap.exists()) {
+        return "✅ SUCCESS: Database is connected and writable! (Read/Write confirmed)";
+    } else {
+        throw new Error("⚠️ WRITE SUCCESS but READ FAILED. Document disappeared immediately.");
+    }
 };
