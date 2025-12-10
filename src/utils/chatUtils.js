@@ -24,7 +24,7 @@ export const DEV_SUGGESTIONS = [
 const STOP_WORDS = ["what", "where", "when", "who", "how", "your", "the", "and", "for", "with", "that", "this", "from", "have", "about", "tell", "show", "give"];
 
 // --- UTILITY: RAG RETRIEVAL ---
-export const getContextualData = async (query, projects, expertise, blogs, sourceCodes = [], isDevMode = false, systemContext = "") => {
+export const getContextualData = async (query, projects = [], expertise = [], blogs = [], sourceCodes = [], isDevMode = false, systemContext = "") => {
     if (!query) return { content: "", confidence: 0 };
 
     // 1. Try Vector Search first
@@ -41,16 +41,24 @@ export const getContextualData = async (query, projects, expertise, blogs, sourc
 
         if (allItems.length > 0) {
             if (isDevMode) console.log(`[RAG] Vector search across ${allItems.length} items.`);
-            const scored = allItems.map(item => ({
-                ...item,
-                score: cosineSimilarity(queryEmbedding, item.data.embedding)
-            }));
 
-            // Filter by threshold to remove noise
-            const relevant = scored
-                .filter(item => item.score > 0.45) // Threshold can be tuned
-                .sort((a, b) => b.score - a.score)
-                .slice(0, isDevMode ? 3 : 5); // Fewer items if code (as code is large)
+            let relevant = [];
+            try {
+                const scored = allItems.map(item => ({
+                    ...item,
+                    score: cosineSimilarity(queryEmbedding, item.data.embedding)
+                }));
+
+                // Filter by threshold to remove noise
+                relevant = scored
+                    .filter(item => item.score > 0.45) // Threshold can be tuned
+                    .sort((a, b) => b.score - a.score)
+                    .slice(0, isDevMode ? 3 : 5); // Fewer items if code (as code is large)
+
+            } catch (err) {
+                console.error("[RAG] Error during vector scoring:", err);
+                // Fallback to empty relevant to continue to keyword search if vector fails
+            }
 
             if (relevant.length > 0) {
                 if (isDevMode) console.log("[RAG] Vector matches found:", relevant.map(r => r.data.title));
