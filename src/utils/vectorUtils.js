@@ -2,8 +2,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
-// Initialize GenAI
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+// Initialize GenAI Lazily
+let genAI = null;
 
 // Simple in-memory cache to prevent redundant API calls
 const embeddingCache = new Map();
@@ -25,6 +25,9 @@ export const getEmbedding = async (text) => {
     }
 
     try {
+        if (!genAI) {
+            genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+        }
         const model = genAI.getGenerativeModel({ model: "text-embedding-004" });
         const result = await model.embedContent(text);
         const embedding = result.embedding.values;
