@@ -62,5 +62,9 @@ const Login = ({ onOfflineLogin }) => {
     </div>
   );
 };
+      </div >
+    </div >
+  );
+};
 
 export default Login;

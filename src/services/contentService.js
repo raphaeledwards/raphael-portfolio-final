@@ -92,6 +92,28 @@ export const fetchChatLogs = async (limitCount = 50) => {
 };
 
 /**
+ * Clears all chat logs from Firestore.
+ */
+export const clearChatLogs = async () => {
+    if (!db) throw new Error("Firestore not initialized");
+
+    try {
+        const querySnapshot = await getDocs(collection(db, 'chat_logs'));
+        const batch = writeBatch(db);
+
+        querySnapshot.forEach((doc) => {
+            batch.delete(doc.ref);
+        });
+
+        await batch.commit();
+        return `Cleared ${querySnapshot.size} chat logs.`;
+    } catch (error) {
+        console.error("Error clearing logs:", error);
+        throw error;
+    }
+};
+
+/**
  * Seeds the Firestore database with local data.
  * WARNING: Overwrites existing data with matching IDs (if we strictly used IDs), 
  * but here we use batch writes for efficiency.

@@ -45,24 +45,25 @@ const App = () => {
   const [blogPosts, setBlogPosts] = useState(INITIAL_BLOGS);
   const [sourceCodes, setSourceCodes] = useState([]);
 
+  const loadContent = async () => {
+    // Determine source code fallback logic
+    // We prioritize Firestore, but if empty/error, we use local manifest.
+    const sourceCode = await fetchContent('source_code', SOURCE_CODE_MANIFEST);
+    setSourceCodes(sourceCode);
+
+    // Other content
+    const projects = await fetchContent('projects', INITIAL_PROJECTS);
+    const expertise = await fetchContent('expertise', INITIAL_EXPERTISE);
+    const blogs = await fetchContent('blogs', INITIAL_BLOGS);
+
+    setProjectItems(projects);
+    setExpertiseAreas(expertise);
+    setBlogPosts(blogs);
+  };
+
   useEffect(() => {
-    const loadContent = async () => {
-      const projects = await fetchContent('projects', INITIAL_PROJECTS);
-      const expertise = await fetchContent('expertise', INITIAL_EXPERTISE);
-      const blogs = await fetchContent('blogs', INITIAL_BLOGS);
-
-      // Fetch source code from Firestore to ensure we have the latest indexed/embedded version.
-      // Fallback to local manifest if not found.
-      const sourceCode = await fetchContent('source_code', SOURCE_CODE_MANIFEST);
-      setSourceCodes(sourceCode);
-
-      setProjectItems(projects);
-      setExpertiseAreas(expertise); // Note: Icons might need re-mapping if fetched from DB (where they are just names/strings)
-      setBlogPosts(blogs);
-    };
     loadContent();
-  }, []);
-
+  }, [user]); // Re-fetch on auth change to ensure we get DB access if rules require it
 
 
 

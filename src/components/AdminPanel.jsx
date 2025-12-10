@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { Lock, Database, X, MessageSquare, ChevronRight, LogOut, BrainCircuit, Loader2 } from 'lucide-react';
 import { auth } from '../firebase';
 import { signOut } from 'firebase/auth';
-import { seedDatabase, fetchChatLogs, indexSourceCode } from '../services/contentService';
+import { seedDatabase, fetchChatLogs, indexSourceCode, clearChatLogs } from '../services/contentService';
 
-const AdminPanel = ({ isOpen, onClose }) => {
+const AdminPanel = ({ isOpen, onClose, onRefreshData }) => {
     const [seedingStatus, setSeedingStatus] = useState(null); // 'loading', 'success', 'error'
     const [activeTab, setActiveTab] = useState('database');
     const [chatLogs, setChatLogs] = useState([]);
@@ -153,6 +153,7 @@ const AdminPanel = ({ isOpen, onClose }) => {
                                             try {
                                                 const msg = await indexSourceCode();
                                                 alert(msg);
+                                                if (onRefreshData) onRefreshData(); // Trigger App to reload data
                                             } catch (e) {
                                                 alert("Error: " + e.message);
                                             } finally {
@@ -176,6 +177,30 @@ const AdminPanel = ({ isOpen, onClose }) => {
                     {/* TAB CONTENT: CHAT LOGS */}
                     {activeTab === 'logs' && (
                         <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                            {/* Actions Header */}
+                            {isAuthorized && chatLogs.length > 0 && (
+                                <div className="flex justify-end mb-2">
+                                    <button
+                                        onClick={async () => {
+                                            if (!window.confirm("Permanently delete ALL server-side chat logs?")) return;
+                                            setIsLoadingLogs(true);
+                                            try {
+                                                await clearChatLogs();
+                                                setChatLogs([]); // Clear local state
+                                                alert("Logs cleared.");
+                                            } catch (e) {
+                                                alert("Error: " + e.message);
+                                            } finally {
+                                                setIsLoadingLogs(false);
+                                            }
+                                        }}
+                                        className="text-xs bg-red-900/20 text-red-500 border border-red-900/50 px-3 py-1 rounded hover:bg-red-900/40 transition-colors flex items-center gap-1"
+                                    >
+                                        <BrainCircuit size={12} /> Clear Server Logs
+                                    </button>
+                                </div>
+                            )}
+
                             {!isAuthorized ? (
                                 <div className="p-3 bg-red-500/10 border border-red-500/20 rounded text-red-500 text-sm font-bold text-center">
                                     ⛔ Unauthorized Access
@@ -201,7 +226,7 @@ const AdminPanel = ({ isOpen, onClose }) => {
                                                 <div className="flex items-center gap-2 text-xs font-mono text-neutral-500">
                                                     <span>{log.timestamp?.toLocaleDateString()} {log.timestamp?.toLocaleTimeString()}</span>
                                                     <span>•</span>
-                                                    <span className="truncate max-w-[100px]">{log.userId}</span>
+                                                    <span className="truncate max-w-[100px] text-white/50">{log.userId}</span>
                                                 </div>
                                                 <p className="text-sm text-white truncate font-medium">{log.userQuery}</p>
                                             </div>
