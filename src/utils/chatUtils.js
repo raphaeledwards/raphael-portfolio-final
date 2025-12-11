@@ -137,13 +137,14 @@ export const getContextualData = async (query, projects = [], expertise = [], bl
     console.log("[RAG Debug] Relevant Docs Found:", relevantDocs.map(d => ({ title: d.title, score: d.score, vector: d.vectorScore, keyword: d.keywordScore })));
 
     const formattedContent = relevantDocs.map(doc => {
-        // Fallback Type Inference
+        // Robust Type Normalization
         let docType = doc.type;
+
+        // Handle "source_code" from Firestore or missing type via Extension inference
+        if (docType === 'source_code') docType = 'CODE';
         if (!docType && (doc.title.endsWith('.js') || doc.title.endsWith('.jsx') || doc.title.endsWith('.css') || doc.title.endsWith('.json'))) {
             docType = 'CODE';
         }
-
-        console.error(`[RAG Safety Check] ${doc.title} -> Type: ${docType} (Orig: ${doc.type}) ContentLen: ${doc.content ? doc.content.length : 'MISSING'}`);
 
         const sourceLabel = doc.vectorScore > doc.keywordScore ? " [Semantic Match]" : " [Keyword Match]";
         const prefix = `Doc: ${doc.title} (${Math.round(doc.score)} pts${sourceLabel})`;
@@ -154,11 +155,11 @@ export const getContextualData = async (query, projects = [], expertise = [], bl
         if (docType === 'CODE') return `[SOURCE CODE: ${doc.title}]\n${doc.description}\n---CODE START---\n${doc.content}\n---CODE END---`;
         if (docType === 'ABOUT') return `[BIOGRAPHY]\nBio: ${doc.bio}\nPhilosophy: ${doc.leadershipPhilosophy}\nTechnical Background: ${doc.technicalBackground}`;
 
-        // SAFETY NET: Never return empty string if we have a match
-        return `[UNKNOWN DOC TYPE: ${doc.title}]\n(Raw Content Dump)\n${JSON.stringify(doc, null, 2)}`;
+        // Fallback: Return raw content if type is still unknown, but no error log needed.
+        return `[DOC: ${doc.title}]\n${JSON.stringify(doc, null, 2)}`;
     }).join('\n\n------------------------\n\n');
 
-    console.error("[RAG FINAL PAYLOAD]:", formattedContent.substring(0, 500));
+    // console.log("[RAG Context Constructed]"); // Clean logs
 
     // Confidence Calculation
     const highestScore = relevantDocs[0].score;
