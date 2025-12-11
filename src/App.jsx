@@ -18,7 +18,8 @@ import SEO from './components/SEO'; // SEO Component
 import ReactionButton from './components/ReactionButton'; // Engagement Component
 
 // --- DATA ---
-import { PROJECT_ITEMS as INITIAL_PROJECTS, EXPERTISE_AREAS as INITIAL_EXPERTISE, BLOG_POSTS as INITIAL_BLOGS, NAV_LINKS } from './data/portfolioData';
+// --- DATA ---
+import { PROJECT_ITEMS as INITIAL_PROJECTS, EXPERTISE_AREAS as INITIAL_EXPERTISE, BLOG_POSTS as INITIAL_BLOGS, FEED_ITEMS, NAV_LINKS } from './data/portfolioData';
 import { SOURCE_CODE_MANIFEST } from './data/sourceCodeManifest';
 import { fetchContent } from './services/contentService';
 
@@ -40,6 +41,9 @@ const App = () => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [activeSection, setActiveSection] = useState('home');
   const [selectedItem, setSelectedItem] = useState(null); // For Modal
+
+  // Featured Work Tabs
+  const [activeWorkTab, setActiveWorkTab] = useState('work'); // 'work' | 'feed'
 
   // Blog Filtering & Pagination
   const [sortOrder, setSortOrder] = useState('newest');
@@ -274,27 +278,82 @@ const App = () => {
             <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
               <div>
                 <h2 className="text-3xl md:text-5xl font-bold mb-4">Featured Work</h2>
-                <p className="text-neutral-400 max-w-xl">A selection of strategic initiatives, technical implementations, and organizational transformations.</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {["All", ...new Set(projectItems.map(item => item.category))].map(cat => <button key={cat} onClick={() => setActiveCategory(cat)} className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${activeCategory === cat ? 'bg-rose-600 text-white' : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white'}`}>{cat}</button>)}
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {(activeCategory === "All" ? projectItems : projectItems.filter(item => item.category === activeCategory)).map((item) => (
-                <div key={item.id} className="group flex flex-col bg-neutral-950 rounded-xl overflow-hidden border border-neutral-800 hover:border-rose-500/30 transition-all cursor-pointer" onClick={() => handleViewItem(item)}>
-                  <div className="relative h-64 overflow-hidden">
-                    <img src={item.image} alt={item.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-80 group-hover:opacity-100" />
-                    <div className="absolute top-4 left-4 bg-neutral-950/90 backdrop-blur px-3 py-1 rounded text-xs font-bold text-rose-500 uppercase tracking-wide border border-neutral-800">{item.category}</div>
-                  </div>
-                  <div className="p-6 flex-1 flex flex-col">
-                    <h3 className="text-xl font-bold text-white mb-2 group-hover:text-rose-500 transition-colors">{item.title}</h3>
-                    <p className="text-neutral-400 text-sm leading-relaxed mb-4 flex-1">{item.description}</p>
-                    <div className="flex items-center text-sm font-bold text-white mt-auto group-hover:translate-x-1 transition-transform">View Case Study <ChevronRight size={16} className="ml-1 text-rose-500" /></div>
-                  </div>
+                <div className="flex gap-6 border-b border-neutral-800">
+                  <button
+                    onClick={() => setActiveWorkTab('work')}
+                    className={`pb-4 text-sm font-bold uppercase tracking-wider transition-all ${activeWorkTab === 'work' ? 'text-rose-500 border-b-2 border-rose-500' : 'text-neutral-500 hover:text-white'}`}
+                  >
+                    Selected Projects
+                  </button>
+                  <button
+                    onClick={() => setActiveWorkTab('feed')}
+                    className={`pb-4 text-sm font-bold uppercase tracking-wider transition-all ${activeWorkTab === 'feed' ? 'text-rose-500 border-b-2 border-rose-500' : 'text-neutral-500 hover:text-white'}`}
+                  >
+                    Director's Cut
+                  </button>
                 </div>
-              ))}
+              </div>
+
+              {activeWorkTab === 'work' && (
+                <div className="flex flex-wrap gap-2">
+                  {["All", ...new Set(projectItems.map(item => item.category))].map(cat => <button key={cat} onClick={() => setActiveCategory(cat)} className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${activeCategory === cat ? 'bg-rose-600 text-white' : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white'}`}>{cat}</button>)}
+                </div>
+              )}
             </div>
+
+            {/* Tab 1: Selected Projects */}
+            {activeWorkTab === 'work' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                {(activeCategory === "All" ? projectItems : projectItems.filter(item => item.category === activeCategory)).map((item) => (
+                  <div key={item.id} className="group flex flex-col bg-neutral-950 rounded-xl overflow-hidden border border-neutral-800 hover:border-rose-500/30 transition-all cursor-pointer" onClick={() => handleViewItem(item)}>
+                    <div className="relative h-64 overflow-hidden">
+                      <img src={item.image} alt={item.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-80 group-hover:opacity-100" />
+                      <div className="absolute top-4 left-4 bg-neutral-950/90 backdrop-blur px-3 py-1 rounded text-xs font-bold text-rose-500 uppercase tracking-wide border border-neutral-800">{item.category}</div>
+                    </div>
+                    <div className="p-6 flex-1 flex flex-col">
+                      <h3 className="text-xl font-bold text-white mb-2 group-hover:text-rose-500 transition-colors">{item.title}</h3>
+                      <p className="text-neutral-400 text-sm leading-relaxed mb-4 flex-1">{item.description}</p>
+                      <div className="flex items-center text-sm font-bold text-white mt-auto group-hover:translate-x-1 transition-transform">View Case Study <ChevronRight size={16} className="ml-1 text-rose-500" /></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Tab 2: Director's Cut Feed */}
+            {activeWorkTab === 'feed' && (
+              <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <p className="text-neutral-400 mb-8 italic border-l-2 border-neutral-800 pl-4">
+                  "The noise ratio in tech is too high. This is my signal. A curated feed of the artifacts that are actually shaping my thinking, annotated with why they matter."
+                </p>
+                <div className="grid gap-6">
+                  {FEED_ITEMS.map((item) => (
+                    <div key={item.id} className="bg-neutral-950 border border-neutral-800 rounded-xl p-8 hover:border-rose-500/30 transition-colors group">
+                      <div className="flex items-center gap-3 mb-4">
+                        <span className="bg-neutral-900 text-white px-3 py-1 rounded text-xs font-bold uppercase tracking-wider border border-neutral-800">{item.source}</span>
+                        <span className="text-rose-500 text-xs font-bold uppercase tracking-wider flex items-center gap-1"><Terminal size={12} /> {item.topic}</span>
+                      </div>
+                      <h3 className="text-xl md:text-2xl font-bold text-white mb-6 group-hover:text-rose-500 transition-colors">
+                        <a href={item.link} target="_blank" rel="noopener noreferrer" className="flex items-start gap-2">
+                          {item.title}
+                          <ChevronRight size={20} className="mt-1 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </a>
+                      </h3>
+
+                      <div className="relative pl-6 border-l-2 border-rose-500/50">
+                        <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-neutral-950 border-2 border-rose-500 flex items-center justify-center">
+                          <div className="w-1.5 h-1.5 rounded-full bg-rose-500"></div>
+                        </div>
+                        <p className="text-neutral-300 italic leading-relaxed">
+                          <span className="text-rose-500 font-bold not-italic mr-2">Raphael's Note:</span>
+                          {item.note}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </section>
 

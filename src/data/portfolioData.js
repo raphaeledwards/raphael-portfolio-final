@@ -115,6 +115,49 @@ export const BLOG_POSTS = [
     }
 ];
 
+export const FEED_ITEMS = [
+    {
+        id: 1,
+        source: "ArXiv",
+        topic: "AI Agents",
+        title: "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models",
+        link: "https://arxiv.org/abs/2201.11903",
+        note: "Validates the approach I'm taking with the rca_analyst tool. Multi-step reasoning is non-negotiable for root cause analysis."
+    },
+    {
+        id: 2,
+        source: "HBR",
+        topic: "Management",
+        title: "The High Cost of a Toxic Culture",
+        link: "https://hbr.org/2022/07/the-high-cost-of-a-toxic-culture",
+        note: "Reminds me that 'resilience' isn't just about code; it's about psychological safety in the team. Toxic cultures create brittle systems."
+    },
+    {
+        id: 3,
+        source: "YCombinator",
+        topic: "Strategy",
+        title: "Do Things That Don't Scale",
+        link: "http://paulgraham.com/ds.html",
+        note: "My go-to rebuttal when stakeholders demand 'fully automated efficiency' on Day 1. You have to be the manual engine before you can build the automatic one."
+    },
+    {
+        id: 4,
+        source: "Google Cloud",
+        topic: "Zero Trust",
+        title: "BeyondProd: A new approach to cloud-native security",
+        link: "https://cloud.google.com/security/beyondprod",
+        note: "The blueprint for my work on the Connected Vehicle OTA framework. Identity must be the perimeter, not the firewall."
+    },
+    {
+        id: 5,
+        source: "Netflix TechBlog",
+        topic: "Chaos Engineering",
+        title: "Fit Cycle: A new way to describe Netflix culture",
+        link: "https://netflixtechblog.com",
+        note: "Chaos Engineering isn't about breaking things; it's about revealing the truth of the system. If you don't test failure, you're just hoping for success."
+    }
+];
+
 
 export const ABOUT_ME = {
     title: "About Raphael J. Edwards",
