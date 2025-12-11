@@ -81,10 +81,21 @@ export const getContextualData = async (query, projects = [], expertise = [], bl
         if (queryEmbedding && doc.embedding) {
             // Calculate Cosine Similarity (Result is usually 0.7 to 1.0 for matches)
             const similarity = cosineSimilarity(queryEmbedding, doc.embedding);
+
+            // Paranoid Log for specific target files
+            if (doc.title.includes("vectorUtils") || doc.title.includes("chatUtils")) {
+                console.log(`[RAG Paranoid] Match Attempt: "${doc.title}" Similarity=${similarity.toFixed(4)}`);
+            }
+
             // Normalize and weight it.
             // A similarity of 0.8 is good, 0.9 is excellent.
             if (similarity > 0.6) {
                 vectorScore = (similarity - 0.6) * 200; // Scale 0.6-1.0 to 0-80 points
+            }
+        } else {
+            // Debug why comparison failed
+            if (doc.title.includes("vectorUtils")) {
+                console.log(`[RAG Paranoid] Vector Calc SKIPPED for ${doc.title}. QueryVec=${!!queryEmbedding}, DocVec=${!!doc.embedding}`);
             }
         }
 
