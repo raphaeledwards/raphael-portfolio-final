@@ -1,4 +1,4 @@
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 import { collection, getDocs, doc, setDoc, getDoc, writeBatch, query, orderBy, limit, increment, updateDoc } from 'firebase/firestore';
 import { PROJECT_ITEMS, EXPERTISE_AREAS, BLOG_POSTS } from '../data/portfolioData';
 import { SOURCE_CODE_MANIFEST } from '../data/sourceCodeManifest';
