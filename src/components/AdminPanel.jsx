@@ -94,7 +94,10 @@ const AdminPanel = ({ isOpen, onClose, onRefreshData }) => {
                     <div className="bg-neutral-950 p-4 rounded-lg border border-neutral-800 shrink-0">
                         <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Authenticated User</h3>
                         <div className="flex items-center justify-between">
-                            <p className="font-mono text-green-500 truncate">{auth.currentUser?.email || 'Unknown User'}</p>
+                            <div className="flex flex-col">
+                                <p className="font-mono text-green-500 truncate">{auth.currentUser?.email || 'Unknown User'}</p>
+                                <p className="font-mono text-[10px] text-neutral-500 select-all">UID: {auth.currentUser?.uid}</p>
+                            </div>
                             <button
                                 onClick={handleLogout}
                                 className="text-xs bg-neutral-900 border border-neutral-700 text-neutral-400 hover:text-white hover:bg-red-900/30 hover:border-red-500/50 px-2 py-1 rounded transition-colors flex items-center gap-1"
