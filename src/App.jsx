@@ -60,13 +60,14 @@ const App = () => {
   const loadContent = async () => {
     // Determine source code fallback logic
     // We prioritize Firestore, but if empty/error, we use local manifest.
-    const sourceCode = await fetchContent('source_code', SOURCE_CODE_MANIFEST);
+    // PASS USER STATE to ensure connection
+    const sourceCode = await fetchContent('source_code', SOURCE_CODE_MANIFEST, user);
     setSourceCodes(sourceCode.map(s => ({ ...s, type: 'source_code' })));
 
     // Other content
-    const projects = await fetchContent('projects', INITIAL_PROJECTS);
-    const expertise = await fetchContent('expertise', INITIAL_EXPERTISE);
-    const blogs = await fetchContent('blogs', INITIAL_BLOGS);
+    const projects = await fetchContent('projects', INITIAL_PROJECTS, user);
+    const expertise = await fetchContent('expertise', INITIAL_EXPERTISE, user);
+    const blogs = await fetchContent('blogs', INITIAL_BLOGS, user);
 
     setProjectItems(projects.map(p => ({ ...p, type: 'project' })));
     setExpertiseAreas(expertise); // Expertise doesn't use modal/reactions yet

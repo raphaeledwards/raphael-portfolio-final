@@ -41,18 +41,18 @@ const serializeFirestoreData = (item, embedding = null) => {
  * Fetches data from a Firestore collection.
  * Returns local fallback data if DB is empty or fails.
  */
-export const fetchContent = async (collectionName, fallbackData) => {
+export const fetchContent = async (collectionName, fallbackData, user = null) => {
     // 1. Initial Guard: No DB
     if (!db) {
         console.warn("Firestore not initialized. Using local fallback.");
         return fallbackData;
     }
 
-    // 2. Auth Guard: Don't Spam Permission Errors
-    // If we are 'Offline Director' (fake login) or not logged in, we know rules will fail.
-    const currentUser = auth?.currentUser;
-    if (!currentUser || currentUser.uid === 'offline-demo-user') {
-        console.log(`[ContentService] Offline/Guest mode detected. Skipping Firestore fetch for ${collectionName}. Using fallback.`);
+    // 2. Auth Guard: Use the PASSED user object from React State
+    // If passed user is null or offline-demo, skip firestore.
+    // We strictly trust the App.jsx state now.
+    if (!user || user.uid === 'offline-demo-user') {
+        console.log(`[ContentService] Offline/Guest mode detected (User: ${user ? user.uid : 'null'}). Skipping Firestore fetch for ${collectionName}. Using fallback.`);
         return fallbackData;
     }
 
