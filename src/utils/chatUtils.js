@@ -24,7 +24,7 @@ export const DEV_SUGGESTIONS = [
 const STOP_WORDS = ["what", "where", "when", "who", "how", "your", "the", "and", "for", "with", "that", "this", "from", "have", "about", "tell", "show", "give"];
 
 // --- UTILITY: RAG RETRIEVAL ---
-// --- UTILITY: RAG RETRIEVAL (STRICT SEARCH V2) ---
+// --- UTILITY: RAG RETRIEVAL (STRICT HYBRID SEARCH V3) ---
 export const getContextualData = async (query, projects = [], expertise = [], blogs = [], sourceCodes = [], isDevMode = false, systemContext = "", aboutMe = null) => {
     if (!query) return { content: "", confidence: 0 };
 
@@ -40,97 +40,108 @@ export const getContextualData = async (query, projects = [], expertise = [], bl
     }
 
     // 0.5 Tech Trigger Detection
-    // Automatically enable "DevMode" retrieval if the user asks technical questions
     const TECH_TRIGGERS = ["rag", "vector", "embedding", "firestore", "firebase", "react", "component", "architecture", "system prompt", "api", "code", "implementation", "database"];
     const isTechQuery = TECH_TRIGGERS.some(trigger => lowerQuery.includes(trigger));
     const shouldIncludeCode = isDevMode || isTechQuery;
 
     // 1. Prepare Searchable Documents
-    // We flatten everything into a standard format for the search engine
     let documents = [
         ...projects.map(p => ({ type: 'PROJECT', ...p })),
         ...expertise.map(e => ({ type: 'EXPERTISE', ...e })),
         ...blogs.map(b => ({ type: 'BLOG', ...b })),
     ];
 
-    // Add About Me Data (if provided)
     if (aboutMe) {
         documents.push({ type: 'ABOUT', title: "About Raphael Edwards", ...aboutMe });
     }
 
-    // Add Code (If explicitly requested via DevMode or implied via Tech Triggers)
     if (shouldIncludeCode) {
         documents = [...documents, ...sourceCodes.map(s => ({ type: 'CODE', ...s }))];
     }
 
-    // 2. Strict Keyword Search Engine
-    // "Vector" means "Vector". Fuzzy matching was the root cause of previous failures.
-    const keywords = lowerQuery.replace(/[?.,!]/g, '').split(/\s+/).filter(w => w.length > 2 && !STOP_WORDS.includes(w));
+    // 2. GENERATE QUERY EMBEDDING
+    let queryEmbedding = null;
+    try {
+        // We attempt to get the embedding for the user's question
+        queryEmbedding = await getEmbedding(query);
+    } catch (e) {
+        console.warn("Failed to generate query embedding, falling back to pure keyword search.", e);
+    }
 
-    // Explicitly add 'rag' and 'vector' to keywords if they appear in query, to ensure they aren't filtered out by aggressive stop/short word logic (though they are >2 chars).
+    // 3. HYBRID SCORING ENGINE
+    const keywords = lowerQuery.replace(/[?.,!]/g, '').split(/\s+/).filter(w => w.length > 2 && !STOP_WORDS.includes(w));
     if (lowerQuery.includes('rag')) keywords.push('rag');
 
     const scoredDocs = documents.map(doc => {
         let score = 0;
+        let vectorScore = 0;
+        let keywordScore = 0;
+
+        // A. VECTOR SCORING (Semantic)
+        if (queryEmbedding && doc.embedding) {
+            // Calculate Cosine Similarity (Result is usually 0.7 to 1.0 for matches)
+            const similarity = cosineSimilarity(queryEmbedding, doc.embedding);
+            // Normalize and weight it.
+            // A similarity of 0.8 is good, 0.9 is excellent.
+            if (similarity > 0.6) {
+                vectorScore = (similarity - 0.6) * 200; // Scale 0.6-1.0 to 0-80 points
+            }
+        }
+
+        // B. KEYWORD SCORING (Exact Match)
         const title = doc.title?.toLowerCase() || "";
         const desc = doc.description?.toLowerCase() || "";
         const content = doc.content?.toLowerCase() || "";
         const tags = (doc.tags || []).join(' ').toLowerCase();
-
-        // Special logic: Flatten objects like "bio" or "philosophy" for ABOUT type
         const aboutContent = doc.type === 'ABOUT' ? (doc.bio + " " + doc.leadershipPhilosophy + " " + doc.technicalBackground).toLowerCase() : "";
 
         keywords.forEach(word => {
-            // CRITICAL: Title matches are worth 100x more. 
-            // This ensures "Vector Utils" > "Connected Vehicle" for query "Vector"
-            if (title.includes(word)) score += 50;
-
-            // Content matches
-            if (desc.includes(word)) score += 5;
-            if (content.includes(word)) score += 5;
-            if (tags.includes(word)) score += 5;
-            if (aboutContent.includes(word)) score += 10; // Boost bio matches
+            if (title.includes(word)) keywordScore += 50;
+            if (desc.includes(word)) keywordScore += 5;
+            if (content.includes(word)) keywordScore += 5;
+            if (tags.includes(word)) keywordScore += 5;
+            if (aboutContent.includes(word)) keywordScore += 10;
         });
 
-        // --- SPECIFIC KNOWLEDGE BOOSTING ---
-
-        // Boost RAG/Vector related source code when asking about RAG
+        // Boost RAG/Vector specific queries via Keywords if Vector search missed 
+        // (This acts as a safety net if embeddings aren't present)
         if (lowerQuery.includes('rag') || lowerQuery.includes('vector')) {
             if (title.includes('vectorutils') || title.includes('chatutils')) {
-                score += 100; // Massive boost to ensure these appear
+                keywordScore += 100;
             }
         }
 
-        // Boost Source Code in general if it matches keywords
-        if (doc.type === 'CODE' && shouldIncludeCode && score > 0) {
-            score += 20; // Bias towards code in Tech scenarios
-        }
+        // C. FINAL SCORE
+        // If we have vector score, it usually trumps keyword, but we combine them.
+        score = vectorScore + keywordScore;
 
-        return { ...doc, score };
+        return { ...doc, score, vectorScore, keywordScore };
     });
 
-    // 3. Filter and Sort
-    // We only take high quality matches.
+    // 4. Filter and Sort
     const relevantDocs = scoredDocs
         .filter(doc => doc.score > 0)
         .sort((a, b) => b.score - a.score)
-        .slice(0, 4); // Top 4 is enough for context window
+        .slice(0, 4);
 
-    // 4. Format Output
+    // 5. Format Output
     if (relevantDocs.length === 0) {
         return { content: "", confidence: 0 };
     }
 
     const formattedContent = relevantDocs.map(doc => {
+        const sourceLabel = doc.vectorScore > doc.keywordScore ? " [Semantic Match]" : " [Keyword Match]";
+        const prefix = `Doc: ${doc.title} (${Math.round(doc.score)} pts${sourceLabel})`;
+
         if (doc.type === 'PROJECT') return `[PROJECT: ${doc.title}]\n${doc.description}\nTechnolgies: ${doc.tags?.join(', ')}`;
         if (doc.type === 'EXPERTISE') return `[EXPERTISE: ${doc.title}]\n${doc.description}`;
-        if (doc.type === 'BLOG') return `[BLOG: ${doc.title}]\n${doc.excerpt}\n${doc.content?.slice(0, 300)}...`; // Snippet only for blogs unless very relevant
+        if (doc.type === 'BLOG') return `[BLOG: ${doc.title}]\n${doc.excerpt}\n${doc.content?.slice(0, 300)}...`;
         if (doc.type === 'CODE') return `[SOURCE CODE: ${doc.title}]\n${doc.description}\n---CODE START---\n${doc.content}\n---CODE END---`;
-        if (doc.type === 'ABOUT') return `[BIOGRAPHY]\nBio: ${doc.bio}\nPhilosophy: ${doc.leadershipPhilosophy}\nTechnical Background: ${doc.technicalBackground}`; // Full context for bio
+        if (doc.type === 'ABOUT') return `[BIOGRAPHY]\nBio: ${doc.bio}\nPhilosophy: ${doc.leadershipPhilosophy}\nTechnical Background: ${doc.technicalBackground}`;
         return "";
     }).join('\n\n------------------------\n\n');
 
-    // Simple confidence calculation
+    // Confidence Calculation
     const highestScore = relevantDocs[0].score;
     let confidence = 0.5;
     if (highestScore > 40) confidence = 0.9;

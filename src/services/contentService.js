@@ -42,8 +42,17 @@ const serializeFirestoreData = (item, embedding = null) => {
  * Returns local fallback data if DB is empty or fails.
  */
 export const fetchContent = async (collectionName, fallbackData) => {
+    // 1. Initial Guard: No DB
     if (!db) {
         console.warn("Firestore not initialized. Using local fallback.");
+        return fallbackData;
+    }
+
+    // 2. Auth Guard: Don't Spam Permission Errors
+    // If we are 'Offline Director' (fake login) or not logged in, we know rules will fail.
+    const currentUser = auth?.currentUser;
+    if (!currentUser || currentUser.uid === 'offline-demo-user') {
+        console.log(`[ContentService] Offline/Guest mode detected. Skipping Firestore fetch for ${collectionName}. Using fallback.`);
         return fallbackData;
     }
 
@@ -57,7 +66,9 @@ export const fetchContent = async (collectionName, fallbackData) => {
         // Map docs to array
         return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
-        console.error(`[ContentService] Error fetching ${collectionName}:`, error);
+        // 3. Fallback Catch
+        // We still catch unexpected errors (like network drop), but the Auth Guard above prevents the common permissions error.
+        console.warn(`[ContentService] Error fetching ${collectionName} (falling back):`, error.message);
         return fallbackData;
     }
 };
