@@ -37,8 +37,7 @@ export const getEmbedding = async (text) => {
 
         return embedding;
     } catch (error) {
-        console.error("Error generating embedding:", error);
-        // Fallback or rethrow depending on desired strictness
+        console.error("❌ Error generating embedding:", { textPreview: text.substring(0, 20), errorMsg: error.message, fullError: error });
         return null;
     }
 };

@@ -264,6 +264,9 @@ export const indexSourceCode = async () => {
                 embedding: embedding,
                 timestamp: new Date()
             });
+            console.log(`✅ Embedding generated for ${file.title}`);
+        } else {
+            console.error(`⚠️ Failed to generate embedding for ${file.title} (Result was null)`);
         }
 
         // Rate limit safeguard
