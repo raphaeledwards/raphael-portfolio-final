@@ -87,30 +87,31 @@ const ChatInterface = ({ user, projects, expertise, blogs, sourceCodes, onClose,
         // Pass dynamic data to RAG, including the ABOUT_ME data
         const { content: contextualData, confidence } = await getContextualData(userInput, projects, expertise, blogs, sourceCodes, isDevMode, externalSystemPrompt, ABOUT_ME);
 
-        // SYSTEM PROMPT CONSTRUCTION (V2 - Strict & Direct)
-        let baseInstructions = `You are the AI Assistant for Raphael Edwards' portfolio. Your goal is to answer the user's question accurately based ONLY on the provided context.
+        // SYSTEM PROMPT CONSTRUCTION (V3 - Strict Evidence-Based)
+        let baseInstructions = `You are the AI Assistant for Raphael Edwards' portfolio. 
+        Your goal is to answer the user's question accurately based **EXCLUSIVELY** on the provided RETRIEVED CONTEXT.
         
-        RULES:
-        1. DO NOT Roleplay as a "Digital Twin" or give long introductions.
-        2. Answer the question DIRECTLY and CONCISELY.
-        3. If the context contains a Code Snippet, explain it like a Senior Engineer.
-        4. If the context contains Biography/Philosophy context, use it to answer personal questions.
-        5. If the context is empty or irrelevant, politely state you do not have that information.
+        CRITICAL RULES:
+        1. **SOURCE OF TRUTH**: Do not use your internal knowledge base if it conflicts with the context. The context contains the *actual* source code of this website.
+        2. **CITE SOURCES**: When explaining how something works, explicitly mention the filenames (e.g., "In vectorUtils.js...") found in the context.
+        3. **BE SPECIFIC**: Do not give generic explanations of "RAG". Explain how *this specific* RAG implementation works based on the code provided (e.g., mention "cosineSimilarity" usage, "gemini-embedding" models, etc.).
+        4. If the context contains a Code Snippet, explain the logic like a Senior Engineer code review.
+        5. If the context is empty, admit you don't know.
         `;
 
         // Inject Developer Mode Persona override if active
         if (isDevMode) {
-            baseInstructions += "\n[MODE: DEVELOPER] You are text-mining source code. Be extremely technical. Cite filenames and line logic.";
+            baseInstructions += "\n[MODE: DEVELOPER ACTIVE] The user is a developer inspecting the codebase. Focus on architecture, file structure, and specific function implementations. Quote line logic if possible.";
         }
 
         // Inject Confidence Instructions
         if (confidence < 0.3) {
-            baseInstructions += `\n[WARNING: LOW CONFIDENCE] The retrieved data is weak. Warn the user you are unsure.`;
+            baseInstructions += `\n[WARNING: LOW CONFIDENCE] The retrieved data seems weak. Warn the user you are unsure and these might be hallucinations or irrelevant files.`;
         }
 
         const finalSystemPrompt = contextualData
-            ? `${baseInstructions}\n\n=== RETRIEVED CONTEXT ===\n${contextualData}\n\n=== USER QUESTION ===\n${userInput}`
-            : `You are the AI Assistant. The user asked a question, but you have NO internal information to answer it.\n\n=== USER QUESTION ===\n${userInput}\n\nINSTRUCTION:\n1. State clearly: "I don't have specific information about that in my database."\n2. DO NOT try to guess or hallucinate.\n3. DO NOT introduce yourself or ask "How can I help?". Just answer that you don't know.\n4. If it seems like a general tech question (not specific to Raphael), you may answer it generally, but preface it with "In general..."`;
+            ? `${baseInstructions}\n\n=== RETRIEVED CONTEXT START ===\n${contextualData}\n=== RETRIEVED CONTEXT END ===\n\n=== USER QUESTION ===\n${userInput}`
+            : `You are the AI Assistant. The user asked a question, but you have NO internal information to answer it.\n\n=== USER QUESTION ===\n${userInput}\n\nINSTRUCTION:\n1. State clearly: "I don't have access to that information in my current context."\n2. DO NOT make up an answer.`;
 
 
         let aiResponse = "I'm having trouble connecting right now.";
