@@ -126,8 +126,11 @@ export const getContextualData = async (query, projects = [], expertise = [], bl
 
     // 5. Format Output
     if (relevantDocs.length === 0) {
+        console.log("[RAG Debug] No relevant documents found.", { query, scores: scoredDocs.filter(d => d.score > 0) });
         return { content: "", confidence: 0 };
     }
+
+    console.log("[RAG Debug] Relevant Docs Found:", relevantDocs.map(d => ({ title: d.title, score: d.score, vector: d.vectorScore, keyword: d.keywordScore })));
 
     const formattedContent = relevantDocs.map(doc => {
         const sourceLabel = doc.vectorScore > doc.keywordScore ? " [Semantic Match]" : " [Keyword Match]";
