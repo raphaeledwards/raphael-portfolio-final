@@ -137,23 +137,24 @@ export const getContextualData = async (query, projects = [], expertise = [], bl
     console.log("[RAG Debug] Relevant Docs Found:", relevantDocs.map(d => ({ title: d.title, score: d.score, vector: d.vectorScore, keyword: d.keywordScore })));
 
     const formattedContent = relevantDocs.map(doc => {
-        // Debug Formatting
-        console.log(`[RAG Format Debug] Processing ${doc.title}: Type=${doc.type}, ContentLen=${doc.content?.length}`);
+        // Fallback Type Inference
+        let docType = doc.type;
+        if (!docType && (doc.title.endsWith('.js') || doc.title.endsWith('.jsx') || doc.title.endsWith('.css') || doc.title.endsWith('.json'))) {
+            docType = 'CODE';
+        }
 
         const sourceLabel = doc.vectorScore > doc.keywordScore ? " [Semantic Match]" : " [Keyword Match]";
         const prefix = `Doc: ${doc.title} (${Math.round(doc.score)} pts${sourceLabel})`;
 
-        if (doc.type === 'PROJECT') return `[PROJECT: ${doc.title}]\n${doc.description}\nTechnolgies: ${doc.tags?.join(', ')}`;
-        if (doc.type === 'EXPERTISE') return `[EXPERTISE: ${doc.title}]\n${doc.description}`;
-        if (doc.type === 'BLOG') return `[BLOG: ${doc.title}]\n${doc.excerpt}\n${doc.content?.slice(0, 300)}...`;
-        if (doc.type === 'CODE') return `[SOURCE CODE: ${doc.title}]\n${doc.description}\n---CODE START---\n${doc.content}\n---CODE END---`;
-        if (doc.type === 'ABOUT') return `[BIOGRAPHY]\nBio: ${doc.bio}\nPhilosophy: ${doc.leadershipPhilosophy}\nTechnical Background: ${doc.technicalBackground}`;
+        if (docType === 'PROJECT') return `[PROJECT: ${doc.title}]\n${doc.description}\nTechnolgies: ${doc.tags?.join(', ')}`;
+        if (docType === 'EXPERTISE') return `[EXPERTISE: ${doc.title}]\n${doc.description}`;
+        if (docType === 'BLOG') return `[BLOG: ${doc.title}]\n${doc.excerpt}\n${doc.content?.slice(0, 300)}...`;
+        if (docType === 'CODE') return `[SOURCE CODE: ${doc.title}]\n${doc.description}\n---CODE START---\n${doc.content}\n---CODE END---`;
+        if (docType === 'ABOUT') return `[BIOGRAPHY]\nBio: ${doc.bio}\nPhilosophy: ${doc.leadershipPhilosophy}\nTechnical Background: ${doc.technicalBackground}`;
 
-        console.warn(`[RAG Format Warn] Unknown doc type for ${doc.title}: ${doc.type}`);
+        // Silent return for unknown types
         return "";
     }).join('\n\n------------------------\n\n');
-
-    console.log("[RAG Final Context Preview]:", formattedContent.substring(0, 200) + "...");
 
     // Confidence Calculation
     const highestScore = relevantDocs[0].score;
