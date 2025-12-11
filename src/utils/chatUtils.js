@@ -143,6 +143,8 @@ export const getContextualData = async (query, projects = [], expertise = [], bl
             docType = 'CODE';
         }
 
+        console.error(`[RAG Safety Check] ${doc.title} -> Type: ${docType} (Orig: ${doc.type}) ContentLen: ${doc.content ? doc.content.length : 'MISSING'}`);
+
         const sourceLabel = doc.vectorScore > doc.keywordScore ? " [Semantic Match]" : " [Keyword Match]";
         const prefix = `Doc: ${doc.title} (${Math.round(doc.score)} pts${sourceLabel})`;
 
@@ -152,9 +154,11 @@ export const getContextualData = async (query, projects = [], expertise = [], bl
         if (docType === 'CODE') return `[SOURCE CODE: ${doc.title}]\n${doc.description}\n---CODE START---\n${doc.content}\n---CODE END---`;
         if (docType === 'ABOUT') return `[BIOGRAPHY]\nBio: ${doc.bio}\nPhilosophy: ${doc.leadershipPhilosophy}\nTechnical Background: ${doc.technicalBackground}`;
 
-        // Silent return for unknown types
-        return "";
+        // SAFETY NET: Never return empty string if we have a match
+        return `[UNKNOWN DOC TYPE: ${doc.title}]\n(Raw Content Dump)\n${JSON.stringify(doc, null, 2)}`;
     }).join('\n\n------------------------\n\n');
+
+    console.error("[RAG FINAL PAYLOAD]:", formattedContent.substring(0, 500));
 
     // Confidence Calculation
     const highestScore = relevantDocs[0].score;
