@@ -40,6 +40,7 @@ const App = () => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [activeSection, setActiveSection] = useState('home');
   const [selectedItem, setSelectedItem] = useState(null); // For Modal
+  const [showAllPosts, setShowAllPosts] = useState(false);
 
   // Dynamic Content State
   const [projectItems, setProjectItems] = useState(INITIAL_PROJECTS);
@@ -145,6 +146,12 @@ const App = () => {
       case 'contact': return 'Contact';
       default: return ''; // Default uses full site title
     }
+  };
+
+  const getCollectionName = (type) => {
+    if (type === 'source_code') return 'source_code';
+    if (type === 'project') return 'projects';
+    return 'blogs';
   };
 
   const handleReactionUpdate = (collectionName, docId, newCount) => {
@@ -291,10 +298,9 @@ const App = () => {
           <div className="container mx-auto px-6 max-w-4xl">
             <div className="flex justify-between items-end mb-12">
               <h2 className="text-3xl md:text-4xl font-bold">Latest Insights</h2>
-              <button className="text-rose-500 font-bold hover:text-white transition-colors">View All Posts</button>
             </div>
             <div className="space-y-6">
-              {blogPosts.map(post => (
+              {blogPosts.slice(0, showAllPosts ? blogPosts.length : 3).map(post => (
                 <div key={post.id} onClick={() => handleViewItem(post)} className="group block bg-neutral-950 p-8 rounded-xl border border-neutral-800 hover:border-rose-500/40 transition-all cursor-pointer">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-3">
                     <h3 className="text-xl font-bold text-white group-hover:text-rose-500 transition-colors">{post.title}</h3>
@@ -315,6 +321,17 @@ const App = () => {
                 </div>
               ))}
             </div>
+
+            {blogPosts.length > 3 && (
+              <div className="mt-12 text-center">
+                <button
+                  onClick={() => setShowAllPosts(!showAllPosts)}
+                  className="bg-neutral-900 border border-neutral-800 text-white px-8 py-3 rounded-full font-bold hover:bg-neutral-800 hover:border-rose-500 hover:text-rose-500 transition-all"
+                >
+                  {showAllPosts ? 'Show Less' : 'View All Posts'}
+                </button>
+              </div>
+            )}
           </div>
         </section>
 
