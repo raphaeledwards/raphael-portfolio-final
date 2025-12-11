@@ -5,6 +5,9 @@ A cutting-edge portfolio application built with **React**, **Vite**, and **Tailw
 ## 🚀 Key Features
 
 -   **🤖 RAG AI Assistant**: Uses Google Gemini API to answer questions drawing from vector-embedded context (Resume, Projects, Blog).
+-   **🔥 Engagement System**: Interactive "Reaction" buttons with optimistic UI and real-time Firestore sync.
+-   **📰 Curated Feed**: "Director's Cut" tab featuring a custom feed of external artifacts with personal analysis.
+-   **🔎 Advanced Blog UX**: Client-side filtering (tags), sorting (date), and scalable pagination.
 -   **🔐 Secure Admin Panel**: Decoupled administration area for content management.
 -   **⚡ High Performance**: Lazy loading, optimized code splitting, and fast initial paint.
 -   **🛠️ Developer Mode**: "Index Source Code" feature allows the AI to answer technical questions about the codebase itself.
