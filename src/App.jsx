@@ -40,7 +40,12 @@ const App = () => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [activeSection, setActiveSection] = useState('home');
   const [selectedItem, setSelectedItem] = useState(null); // For Modal
-  const [showAllPosts, setShowAllPosts] = useState(false);
+
+  // Blog Filtering & Pagination
+  const [sortOrder, setSortOrder] = useState('newest');
+  const [selectedTag, setSelectedTag] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 3;
 
   // Dynamic Content State
   const [projectItems, setProjectItems] = useState(INITIAL_PROJECTS);
@@ -299,39 +304,118 @@ const App = () => {
             <div className="flex justify-between items-end mb-12">
               <h2 className="text-3xl md:text-4xl font-bold">Latest Insights</h2>
             </div>
-            <div className="space-y-6">
-              {blogPosts.slice(0, showAllPosts ? blogPosts.length : 3).map(post => (
-                <div key={post.id} onClick={() => handleViewItem(post)} className="group block bg-neutral-950 p-8 rounded-xl border border-neutral-800 hover:border-rose-500/40 transition-all cursor-pointer">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-3">
-                    <h3 className="text-xl font-bold text-white group-hover:text-rose-500 transition-colors">{post.title}</h3>
-                    <span className="text-xs font-bold text-neutral-500 uppercase tracking-wide whitespace-nowrap">{post.date}</span>
-                  </div>
-                  <p className="text-neutral-400">{post.excerpt}</p>
-                  <div className="mt-4 flex items-center justify-between">
-                    <div className="text-sm font-bold text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">Read Article <ChevronRight size={14} /></div>
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <ReactionButton
-                        collectionName="blogs"
-                        docId={post.id}
-                        initialCount={post.reactionCount}
-                        onReaction={(newCount) => handleReactionUpdate('blogs', post.id, newCount)}
-                      />
-                    </div>
-                  </div>
+            {/* Filter Bar */}
+            <div className="flex flex-col md:flex-row gap-6 mb-12 justify-between items-start md:items-center">
+              {/* Sort Dropdown */}
+              <div className="relative">
+                <select
+                  value={sortOrder}
+                  onChange={(e) => setSortOrder(e.target.value)}
+                  className="bg-neutral-900 border border-neutral-800 text-white rounded-lg px-4 py-2 appearance-none cursor-pointer hover:border-rose-500 transition-colors pr-10 font-bold text-sm"
+                >
+                  <option value="newest">Newest First</option>
+                  <option value="oldest">Oldest First</option>
+                </select>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-500">
+                  <ChevronRight size={14} className="rotate-90" />
                 </div>
-              ))}
+              </div>
+
+              {/* Tag Filter */}
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => { setSelectedTag(null); setCurrentPage(1); }}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${!selectedTag ? 'bg-rose-600 text-white' : 'bg-neutral-900 border border-neutral-800 text-neutral-400 hover:border-rose-500 hover:text-white'}`}
+                >
+                  All
+                </button>
+                {[...new Set(blogPosts.flatMap(post => post.tags || []))].map(tag => (
+                  <button
+                    key={tag}
+                    onClick={() => { setSelectedTag(tag); setCurrentPage(1); }}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${selectedTag === tag ? 'bg-rose-600 text-white' : 'bg-neutral-900 border border-neutral-800 text-neutral-400 hover:border-rose-500 hover:text-white'}`}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {blogPosts.length > 3 && (
-              <div className="mt-12 text-center">
-                <button
-                  onClick={() => setShowAllPosts(!showAllPosts)}
-                  className="bg-neutral-900 border border-neutral-800 text-white px-8 py-3 rounded-full font-bold hover:bg-neutral-800 hover:border-rose-500 hover:text-rose-500 transition-all"
-                >
-                  {showAllPosts ? 'Show Less' : 'View All Posts'}
-                </button>
-              </div>
-            )}
+            {/* Content List */}
+            <div className="space-y-6">
+              {(() => {
+                let filtered = [...blogPosts];
+
+                // 1. Filter by Tag
+                if (selectedTag) {
+                  filtered = filtered.filter(post => post.tags && post.tags.includes(selectedTag));
+                }
+
+                // 2. Sort
+                filtered.sort((a, b) => {
+                  const dateA = new Date(a.date);
+                  const dateB = new Date(b.date);
+                  return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
+                });
+
+                // 3. Paginate
+                const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+                const paginated = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+                return (
+                  <>
+                    {paginated.map(post => (
+                      <div key={post.id} onClick={() => handleViewItem(post)} className="group block bg-neutral-950 p-8 rounded-xl border border-neutral-800 hover:border-rose-500/40 transition-all cursor-pointer">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-3">
+                          <h3 className="text-xl font-bold text-white group-hover:text-rose-500 transition-colors">{post.title}</h3>
+                          <div className="flex items-center gap-4">
+                            <div className="flex gap-2">
+                              {post.tags?.slice(0, 2).map(tag => (
+                                <span key={tag} className="text-[10px] font-bold uppercase tracking-wider bg-neutral-900 text-neutral-500 px-2 py-1 rounded">{tag}</span>
+                              ))}
+                            </div>
+                            <span className="text-xs font-bold text-neutral-500 uppercase tracking-wide whitespace-nowrap">{post.date}</span>
+                          </div>
+                        </div>
+                        <p className="text-neutral-400">{post.excerpt}</p>
+                        <div className="mt-4 flex items-center justify-between">
+                          <div className="text-sm font-bold text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">Read Article <ChevronRight size={14} /></div>
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <ReactionButton
+                              collectionName="blogs"
+                              docId={post.id}
+                              initialCount={post.reactionCount}
+                              onReaction={(newCount) => handleReactionUpdate('blogs', post.id, newCount)}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Pagination Controls */}
+                    {totalPages > 1 && (
+                      <div className="flex justify-center items-center gap-4 mt-12 bg-neutral-900/50 p-4 rounded-full w-fit mx-auto border border-neutral-800">
+                        <button
+                          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                          disabled={currentPage === 1}
+                          className={`p-2 rounded-full transition-colors ${currentPage === 1 ? 'text-neutral-600 cursor-not-allowed' : 'text-white hover:bg-neutral-800 hover:text-rose-500'}`}
+                        >
+                          <ChevronRight size={20} className="rotate-180" />
+                        </button>
+                        <span className="text-sm font-bold text-neutral-400">Page <span className="text-white">{currentPage}</span> of {totalPages}</span>
+                        <button
+                          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                          disabled={currentPage === totalPages}
+                          className={`p-2 rounded-full transition-colors ${currentPage === totalPages ? 'text-neutral-600 cursor-not-allowed' : 'text-white hover:bg-neutral-800 hover:text-rose-500'}`}
+                        >
+                          <ChevronRight size={20} />
+                        </button>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
           </div>
         </section>
 

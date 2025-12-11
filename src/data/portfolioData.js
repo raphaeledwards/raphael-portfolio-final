@@ -21,6 +21,7 @@ export const BLOG_POSTS = [
         id: 1,
         title: "The Human Element in Digital Transformation",
         date: "Oct 24, 2025",
+        tags: ["Leadership", "Transformation", "Culture"],
         excerpt: "Why technology is only 20% of the challenge when upgrading legacy systems.",
         content: `Digital transformation is rarely about the code. In my experience leading large-scale modernizations, the technology stack—whether it's moving to Kubernetes, adopting a microservices architecture, or migrating to the cloud—is the predictable part. The variable that determines success or failure is always human.
 
@@ -32,6 +33,7 @@ export const BLOG_POSTS = [
         id: 2,
         title: "Navigating the Edge: Security Implications",
         date: "Sep 15, 2025",
+        tags: ["Security", "Edge Computing", "Zero Trust"],
         excerpt: "How edge computing is redefining the perimeter and what CISOs need to know.",
         content: `The traditional security perimeter is dead. With the rise of Edge Computing and IoT, the "fortress" model—where we protect a central data center with high walls—is no longer viable. We are moving compute power closer to where data is generated, which means our attack surface essentially expands to every connected device, sensor, and gateway in the field.
 
@@ -43,6 +45,7 @@ export const BLOG_POSTS = [
         id: 3,
         title: "Leadership in the Age of AI",
         date: "Aug 02, 2025",
+        tags: ["AI", "Leadership", "Management"],
         excerpt: "Adapting management styles when your team is augmented by intelligent agents.",
         content: `We are entering an era where "team" no longer just refers to humans. With the integration of AI agents into the software development lifecycle, the role of an engineering leader is evolving from purely managing people to orchestrating hybrid human-AI workflows. This shifts the focus from "how do we write this code?" to "how do we define the problem clearly enough for our agents to solve it?"
 
@@ -54,6 +57,7 @@ export const BLOG_POSTS = [
         id: 4,
         title: "AI Agents in DevOps: The End of Pipelines?",
         date: "Nov 05, 2025",
+        tags: ["DevOps", "AI", "Automation"],
         excerpt: "Why static CI/CD pipelines are becoming obsolete in the face of autonomous agents.",
         content: `The traditional CI/CD pipeline is a deterministic assembly line. It assumes that inputs A plus process B will always equal output C. But software development is becoming probabilistic. When AI agents start generating code, writing tests, and even deploying fixes, the rigid "pipeline" metaphor breaks down.
 
@@ -65,6 +69,7 @@ export const BLOG_POSTS = [
         id: 5,
         title: "Zero Trust isn't Product, It's Culture",
         date: "Nov 12, 2025",
+        tags: ["Security", "Zero Trust", "Culture"],
         excerpt: "Stop buying 'Zero Trust' boxes. Start verifying every interaction.",
         content: `Vendor marketing has convinced many leaders that Zero Trust is something you buy. It's not. You can't install a "Zero Trust Firewall" and call it a day. Zero Trust is a fundamental architectural philosophy that begins with a simple, uncomfortable premise: "We are already breached."
         
@@ -76,6 +81,7 @@ export const BLOG_POSTS = [
         id: 6,
         title: "Cloud FinOps: Your AWS Bill is Bleeding",
         date: "Nov 22, 2025",
+        tags: ["Cloud", "FinOps", "Cost"],
         excerpt: "Why auto-scaling is a trap without economic observability.",
         content: `The promise of the cloud was "pay only for what you use." The reality for most enterprises is "pay for what you forgot to turn off." I've scrutinized AWS bills where 40% of the spend was waste—orphaned snapshots, over-provisioned databases, and data transfer fees from inefficient architecture.
         
@@ -87,6 +93,7 @@ export const BLOG_POSTS = [
         id: 7,
         title: "Stop Measuring Lines of Code",
         date: "Dec 01, 2025",
+        tags: ["Management", "Metrics", "Engineering"],
         excerpt: "Velocity metrics that actually matter for high-performance teams.",
         content: `If you measure developers by lines of code, you will get bloated, unmaintainable software. If you measure them by tickets closed, you will get trivial bug fixes. The observer effect in engineering management is real: you get exactly behavior you incentivize.
         
@@ -98,6 +105,7 @@ export const BLOG_POSTS = [
         id: 8,
         title: "Technical Debt as a Feature",
         date: "Dec 08, 2025",
+        tags: ["Strategy", "Technical Debt", "Engineering"],
         excerpt: "Refactoring isn't a chore; it's a strategic investment instrument.",
         content: `We often talk about technical debt like it's a moral failing. "We took a shortcut, now we must pay." But debt, in finance, is a tool for leverage. You take on debt to grow faster than your capital allows. The same applies to code.
         
