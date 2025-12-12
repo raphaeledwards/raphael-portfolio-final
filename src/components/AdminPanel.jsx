@@ -148,7 +148,8 @@ const AdminPanel = ({ isOpen, onClose, onRefreshData }) => {
                                         disabled={seedingStatus === 'loading'}
                                         className="w-full bg-neutral-800 border border-neutral-700 text-white font-bold py-3 px-6 rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                                     >
-                                        <BrainCircuit size={16} /> Generate Embeddings
+                                        {seedingStatus === 'loading' ? <Loader2 className="animate-spin" size={16} /> : <BrainCircuit size={16} />}
+                                        {seedingStatus === 'loading' ? "Generating..." : "Generate Embeddings"}
                                     </button>
 
                                     <button
@@ -168,7 +169,8 @@ const AdminPanel = ({ isOpen, onClose, onRefreshData }) => {
                                         disabled={seedingStatus === 'loading'}
                                         className="w-full bg-neutral-800 border border-neutral-700 text-white font-bold py-3 px-6 rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                                     >
-                                        <Database size={16} /> Index Source Code (Developer Mode)
+                                        {seedingStatus === 'loading' ? <Loader2 className="animate-spin" size={16} /> : <Database size={16} />}
+                                        {seedingStatus === 'loading' ? "Indexing..." : "Index Source Code (Developer Mode)"}
                                     </button>
 
                                     {/* Updated Diagnostics Button */}
