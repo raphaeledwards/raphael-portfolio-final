@@ -34,15 +34,15 @@ const AdminPanel = ({ isOpen, onClose, onRefreshData }) => {
         if (!auth.currentUser) return;
         if (!window.confirm("Overwrite Firestore database with local content? This cannot be undone.")) return;
 
-        setSeedingStatus('loading');
+        setSeedingStatus('seeding');
         try {
             const count = await seedDatabase();
-            setSeedingStatus('success');
+            // setSeedingStatus('success'); // No longer needed as we alert immediately
             alert(`Database seeded successfully! (${count} items)`);
             window.location.reload();
         } catch (e) {
             console.error(e);
-            setSeedingStatus('error');
+            // setSeedingStatus('error');
             alert(`Seeding failed: ${e.message}`);
         } finally {
             setSeedingStatus(null);
@@ -121,10 +121,10 @@ const AdminPanel = ({ isOpen, onClose, onRefreshData }) => {
                                 <div className="space-y-3">
                                     <button
                                         onClick={handleSeed}
-                                        disabled={seedingStatus === 'loading'}
+                                        disabled={seedingStatus !== null}
                                         className="w-full bg-rose-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-rose-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                     >
-                                        {seedingStatus === 'loading' ? (
+                                        {seedingStatus === 'seeding' ? (
                                             <>Seeding...</>
                                         ) : (
                                             <>⚡ Seed Database</>
@@ -134,7 +134,7 @@ const AdminPanel = ({ isOpen, onClose, onRefreshData }) => {
                                     <button
                                         onClick={async () => {
                                             if (!window.confirm("Generate embeddings for all items? This consumes API quota.")) return;
-                                            setSeedingStatus('loading');
+                                            setSeedingStatus('generating_embeddings');
                                             try {
                                                 const { updateEmbeddings } = await import('../services/contentService');
                                                 await updateEmbeddings();
@@ -145,17 +145,17 @@ const AdminPanel = ({ isOpen, onClose, onRefreshData }) => {
                                                 setSeedingStatus(null);
                                             }
                                         }}
-                                        disabled={seedingStatus === 'loading'}
+                                        disabled={seedingStatus !== null}
                                         className="w-full bg-neutral-800 border border-neutral-700 text-white font-bold py-3 px-6 rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                                     >
-                                        {seedingStatus === 'loading' ? <Loader2 className="animate-spin" size={16} /> : <BrainCircuit size={16} />}
-                                        {seedingStatus === 'loading' ? "Generating..." : "Generate Embeddings"}
+                                        {seedingStatus === 'generating_embeddings' ? <Loader2 className="animate-spin" size={16} /> : <BrainCircuit size={16} />}
+                                        {seedingStatus === 'generating_embeddings' ? "Generating..." : "Generate Embeddings"}
                                     </button>
 
                                     <button
                                         onClick={async () => {
                                             if (!window.confirm("Index source code into RAG system?")) return;
-                                            setSeedingStatus('loading');
+                                            setSeedingStatus('indexing_source');
                                             try {
                                                 const msg = await indexSourceCode();
                                                 alert(msg);
@@ -166,18 +166,18 @@ const AdminPanel = ({ isOpen, onClose, onRefreshData }) => {
                                                 setSeedingStatus(null);
                                             }
                                         }}
-                                        disabled={seedingStatus === 'loading'}
+                                        disabled={seedingStatus !== null}
                                         className="w-full bg-neutral-800 border border-neutral-700 text-white font-bold py-3 px-6 rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                                     >
-                                        {seedingStatus === 'loading' ? <Loader2 className="animate-spin" size={16} /> : <Database size={16} />}
-                                        {seedingStatus === 'loading' ? "Indexing..." : "Index Source Code (Developer Mode)"}
+                                        {seedingStatus === 'indexing_source' ? <Loader2 className="animate-spin" size={16} /> : <Database size={16} />}
+                                        {seedingStatus === 'indexing_source' ? "Indexing..." : "Index Source Code (Developer Mode)"}
                                     </button>
 
                                     {/* Updated Diagnostics Button */}
                                     <button
                                         onClick={async () => {
                                             console.log("Running diagnostics...");
-                                            setSeedingStatus('loading');
+                                            setSeedingStatus('running_diagnostics');
                                             try {
                                                 const result = await runDiagnostics();
                                                 console.log("Diagnostics Result:", result);
@@ -189,7 +189,7 @@ const AdminPanel = ({ isOpen, onClose, onRefreshData }) => {
                                                 setSeedingStatus(null);
                                             }
                                         }}
-                                        disabled={seedingStatus === 'loading'}
+                                        disabled={seedingStatus !== null}
                                         className="w-full bg-neutral-800 border border-neutral-700 text-rose-500 font-bold py-3 px-6 rounded-lg hover:bg-neutral-700 hover:text-rose-400 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                                     >
                                         <Activity size={16} /> Run System Diagnostics
