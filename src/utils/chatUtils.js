@@ -59,6 +59,18 @@ export const getContextualData = async (query, projects = [], expertise = [], bl
         documents = [...documents, ...sourceCodes.map(s => ({ type: 'CODE', ...s }))];
     }
 
+    // 1.5 Inject System Persona as a Searchable Document
+    // This allows the RAG to "find" the email/contact info which is defined in the system prompt.
+    if (systemContext) {
+        documents.push({
+            type: 'PERSONA',
+            title: 'AI Persona & Core Instructions',
+            description: 'The core identity, contact information, and operating rules for the AI.',
+            content: systemContext,
+            tags: ['email', 'contact', 'identity', 'rules', 'persona', 'raphael', 'system']
+        });
+    }
+
     // 2. GENERATE QUERY EMBEDDING
     let queryEmbedding = null;
     try {
@@ -154,6 +166,7 @@ export const getContextualData = async (query, projects = [], expertise = [], bl
         if (docType === 'BLOG') return `[BLOG: ${doc.title}]\n${doc.excerpt}\n${doc.content?.slice(0, 300)}...`;
         if (docType === 'CODE') return `[SOURCE CODE: ${doc.title}]\n${doc.description}\n---CODE START---\n${doc.content}\n---CODE END---`;
         if (docType === 'ABOUT') return `[BIOGRAPHY]\nBio: ${doc.bio}\nPhilosophy: ${doc.leadershipPhilosophy}\nTechnical Background: ${doc.technicalBackground}`;
+        if (docType === 'PERSONA') return `[SYSTEM IDENTITY]\n${doc.content}`;
 
         // Fallback: Return raw content if type is still unknown, but no error log needed.
         return `[DOC: ${doc.title}]\n${JSON.stringify(doc, null, 2)}`;

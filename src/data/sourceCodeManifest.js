@@ -8,13 +8,15 @@ import File1 from './../components/AdminPanel.jsx?raw';
 import File2 from './../components/ChatInterface.jsx?raw';
 import File3 from './../components/ErrorBoundary.jsx?raw';
 import File4 from './../components/Modal.jsx?raw';
-import File5 from './../firebase.js?raw';
-import File6 from './../index.css?raw';
-import File7 from './../Login.jsx?raw';
-import File8 from './../main.jsx?raw';
-import File9 from './../services/contentService.js?raw';
-import File10 from './../utils/chatUtils.js?raw';
-import File11 from './../utils/vectorUtils.js?raw';
+import File5 from './../components/ReactionButton.jsx?raw';
+import File6 from './../components/SEO.jsx?raw';
+import File7 from './../firebase.js?raw';
+import File8 from './../index.css?raw';
+import File9 from './../Login.jsx?raw';
+import File10 from './../main.jsx?raw';
+import File11 from './../services/contentService.js?raw';
+import File12 from './../utils/chatUtils.js?raw';
+import File13 from './../utils/vectorUtils.js?raw';
 
 export const SOURCE_CODE_MANIFEST = [
         {
@@ -58,59 +60,75 @@ export const SOURCE_CODE_MANIFEST = [
         content: File4
     },
     {
-        id: 'file_5_firebase_js',
-        filePath: 'src/firebase.js',
-        title: 'firebase.js',
-        description: 'Source code for src/firebase.js',
+        id: 'file_5_ReactionButton_jsx',
+        filePath: 'src/components/ReactionButton.jsx',
+        title: 'ReactionButton.jsx',
+        description: 'Source code for src/components/ReactionButton.jsx',
         category: 'Source Code',
         content: File5
     },
     {
-        id: 'file_6_index_css',
-        filePath: 'src/index.css',
-        title: 'index.css',
-        description: 'Source code for src/index.css',
+        id: 'file_6_SEO_jsx',
+        filePath: 'src/components/SEO.jsx',
+        title: 'SEO.jsx',
+        description: 'Source code for src/components/SEO.jsx',
         category: 'Source Code',
         content: File6
     },
     {
-        id: 'file_7_Login_jsx',
-        filePath: 'src/Login.jsx',
-        title: 'Login.jsx',
-        description: 'Source code for src/Login.jsx',
+        id: 'file_7_firebase_js',
+        filePath: 'src/firebase.js',
+        title: 'firebase.js',
+        description: 'Source code for src/firebase.js',
         category: 'Source Code',
         content: File7
     },
     {
-        id: 'file_8_main_jsx',
-        filePath: 'src/main.jsx',
-        title: 'main.jsx',
-        description: 'Source code for src/main.jsx',
+        id: 'file_8_index_css',
+        filePath: 'src/index.css',
+        title: 'index.css',
+        description: 'Source code for src/index.css',
         category: 'Source Code',
         content: File8
     },
     {
-        id: 'file_9_contentService_js',
-        filePath: 'src/services/contentService.js',
-        title: 'contentService.js',
-        description: 'Source code for src/services/contentService.js',
+        id: 'file_9_Login_jsx',
+        filePath: 'src/Login.jsx',
+        title: 'Login.jsx',
+        description: 'Source code for src/Login.jsx',
         category: 'Source Code',
         content: File9
     },
     {
-        id: 'file_10_chatUtils_js',
-        filePath: 'src/utils/chatUtils.js',
-        title: 'chatUtils.js',
-        description: 'Source code for src/utils/chatUtils.js',
+        id: 'file_10_main_jsx',
+        filePath: 'src/main.jsx',
+        title: 'main.jsx',
+        description: 'Source code for src/main.jsx',
         category: 'Source Code',
         content: File10
     },
     {
-        id: 'file_11_vectorUtils_js',
+        id: 'file_11_contentService_js',
+        filePath: 'src/services/contentService.js',
+        title: 'contentService.js',
+        description: 'Source code for src/services/contentService.js',
+        category: 'Source Code',
+        content: File11
+    },
+    {
+        id: 'file_12_chatUtils_js',
+        filePath: 'src/utils/chatUtils.js',
+        title: 'chatUtils.js',
+        description: 'Source code for src/utils/chatUtils.js',
+        category: 'Source Code',
+        content: File12
+    },
+    {
+        id: 'file_13_vectorUtils_js',
         filePath: 'src/utils/vectorUtils.js',
         title: 'vectorUtils.js',
         description: 'Source code for src/utils/vectorUtils.js',
         category: 'Source Code',
-        content: File11
+        content: File13
     }
 ];
