@@ -175,10 +175,19 @@ export const getContextualData = async (query, projects = [], expertise = [], bl
     // console.log("[RAG Context Constructed]"); // Clean logs
 
     // Confidence Calculation
-    const highestScore = relevantDocs[0].score;
+    // Confidence Calculation
+    const highestDoc = relevantDocs[0];
+    const highestScore = highestDoc.score;
     let confidence = 0.5;
-    if (highestScore > 40) confidence = 0.9;
-    else if (highestScore > 10) confidence = 0.7;
+
+    // RULE: If the top result is the SYSTEM PERSONA or BIO, we are 95% confident.
+    if (highestDoc.type === 'PERSONA' || highestDoc.type === 'ABOUT') {
+        confidence = 0.95;
+    } else if (highestScore > 40) {
+        confidence = 0.9;
+    } else if (highestScore > 10) {
+        confidence = 0.7;
+    }
 
     return { content: formattedContent, confidence };
 };
