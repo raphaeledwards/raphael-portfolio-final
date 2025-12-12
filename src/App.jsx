@@ -76,7 +76,7 @@ const App = () => {
 
   useEffect(() => {
     loadContent();
-  }, [user]); // Re-fetch on auth change to ensure we get DB access if rules require it
+  }, [user]); // Re-fetch on auth change to ensure we get bios access if rules require it
 
 
 
