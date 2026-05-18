@@ -218,8 +218,7 @@ const App = () => {
           </div>
           <div className="relative z-10 px-6 max-w-5xl mx-auto mt-16 text-center">
             <div className="inline-block px-3 py-1 mb-6 border border-rose-500/30 rounded-full bg-rose-500/10 text-rose-500 text-xs font-bold tracking-widest uppercase">Technology Leadership · AI Practitioner</div>
-            <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter mb-8 leading-none">BUILDING <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-500 to-orange-600">RESILIENT TEAMS.</span> <br />SOLVING <span className="text-white">COMPLEX PROBLEMS.</span></h1>
-            <p className="text-lg md:text-2xl text-neutral-400 mb-10 max-w-2xl mx-auto leading-relaxed font-light border-l-4 border-rose-600 pl-6 text-left">Technology Executive & Services Architect based in Boston.</p>
+            <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter mb-10 leading-none">BUILDING <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-500 to-orange-600">RESILIENT TEAMS.</span> <br />SOLVING <span className="text-white">COMPLEX PROBLEMS.</span></h1>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button onClick={() => scrollToSection('projects')} className="bg-white text-black px-8 py-4 rounded-sm font-bold hover:bg-neutral-200 transition-colors flex items-center justify-center gap-2">View Projects <ChevronRight size={18} /></button>
               <button onClick={() => scrollToSection('contact')} className="px-8 py-4 rounded-sm font-bold border border-white/20 hover:bg-white/10 transition-colors backdrop-blur-sm">Consulting Inquiries</button>
