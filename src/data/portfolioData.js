@@ -13,7 +13,7 @@ export const EXPERTISE_AREAS = [
     { title: "Team Strategy & Growth", icon: Users, description: "Building high-performance cultures and scaling engineering organizations." },
     { title: "Cybersecurity & Edge", icon: Lock, description: "Securing assets in a decentralized world with robust, modern frameworks." },
     { title: "Cloud Computing", icon: Cloud, description: "Architecting scalable, resilient infrastructure for the modern enterprise." },
-    { title: "AI & Future Tech", icon: BrainCircuit, description: "Leveraging machine learning and emerging tech to solve complex problems." }
+    { title: "AI Systems Design", icon: BrainCircuit, description: "Building agent runtimes, persistent memory systems, and human-in-the-loop orchestration layers for production AI." }
 ];
 
 export const BLOG_POSTS = [
@@ -108,10 +108,44 @@ export const BLOG_POSTS = [
         tags: ["Strategy", "Technical Debt", "Engineering"],
         excerpt: "Refactoring isn't a chore; it's a strategic investment instrument.",
         content: `We often talk about technical debt like it's a moral failing. "We took a shortcut, now we must pay." But debt, in finance, is a tool for leverage. You take on debt to grow faster than your capital allows. The same applies to code.
-        
+
         Taking on technical debt to ship a feature before a competitor is a valid business strategy. The problem isn't the debt; it's the lack of a repayment plan. When technical debt becomes "unmanaged," it turns into "technical insolvency"—where you spend all your time servicing the interest (fixing bugs) and have no principal left for new features.
-        
+
         The best teams treat refactoring as a continuous feature. They allocate 20% of every sprint to paying down debt. This isn't "maintenance"; it's ensuring the factory floor remains clean enough to build the next Ferrari. If you don't schedule time for maintenance, your equipment will schedule it for you—usually at the worst possible time.`
+    },
+    {
+        id: 9,
+        title: "Building a Local AI Agent from Scratch",
+        date: "Jan 15, 2026",
+        tags: ["AI", "Engineering", "Agents"],
+        excerpt: "What actually happens when you wire local LLM inference, vector memory, and autonomous task loops into a single coherent system.",
+        content: `The first question when building an autonomous AI agent isn't "which LLM?" It's "what happens when it's wrong?" I spent several weeks building a local agent runtime, and the hardest problems had nothing to do with the model itself.
+
+The stack: Node.js and TypeScript for the runtime, Ollama for local LLM inference, and LanceDB for vector-based persistent memory. No cloud APIs, no usage costs, no data leaving the machine. The trade-off is latency — a local model is slower than a hosted API, but for an always-on personal agent, privacy and control matter more than raw throughput.
+
+The architectural challenge is memory. A context window is not memory. It's a scratchpad. Real memory means the agent can recall something from six weeks ago, understand how it connects to today's request, and respond with appropriate continuity. That requires a three-tier system: short-term (in-context), episodic (recent interactions indexed by vector similarity), and semantic (synthesized facts extracted from recurring patterns).
+
+The second challenge is autonomy guardrails. An agent that can act — send messages, query APIs, execute code — needs a policy engine that distinguishes between safe, reversible actions and destructive, irreversible ones. I implemented an approval gate architecture where any action above a defined risk threshold requires explicit confirmation before proceeding. This isn't safety theater; it's what makes the agent trustworthy enough to actually delegate to.
+
+The lesson: the capability of the underlying model matters far less than the architecture surrounding it. Orchestration, memory design, and policy enforcement are where the real engineering happens.`
+    },
+    {
+        id: 10,
+        title: "The Memory Problem in AI Systems",
+        date: "Feb 28, 2026",
+        tags: ["AI", "Memory", "Architecture"],
+        excerpt: "Context windows aren't memory. Here's what persistent AI memory actually requires at the architecture level.",
+        content: `Every production AI feature I've seen fail does so in the same way: it treats context as disposable. The session ends, the conversation resets, and the system has no recollection of the user, their preferences, or the problem they've been trying to solve for the past three months.
+
+This is a product failure masquerading as a technical limitation.
+
+The technical solution exists. Semantic vector stores can persist and retrieve memory at scale. Text embedding models encode nuanced context into high-dimensional space and retrieve it by similarity, not exact match. The primitives are available; the problem is design.
+
+The first design challenge is what to store and when. Raw conversation transcripts are too noisy. If you store everything, you retrieve everything — including contradictions and outdated states. Effective AI memory requires a synthesis layer: something that periodically distills interactions into compressed, structured facts. I've implemented this as an autonomous nightly agent that reviews the day's interactions, extracts durable insights, and writes them back to the memory store as tagged, searchable entries.
+
+The second challenge is memory freshness. A fact stored three months ago may be stale today. Memory systems need staleness scoring — older, unconfirmed memories should carry lower retrieval weight than recently validated ones. Most implementations skip this entirely, which leads to AI systems confidently acting on outdated information.
+
+Memory is what separates a demo from a product. If your AI feature can't remember the user across sessions, you haven't built a feature — you've built a novelty.`
     }
 ];
 
@@ -119,10 +153,10 @@ export const FEED_ITEMS = [
     {
         id: 1,
         source: "ArXiv",
-        topic: "AI Agents",
-        title: "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models",
-        link: "https://arxiv.org/abs/2201.11903",
-        note: "Validates the approach I'm taking with the rca_analyst tool. Multi-step reasoning is non-negotiable for root cause analysis."
+        topic: "Agent Architecture",
+        title: "Autonomy and Agency in Agentic AI: Architectural Tactics for Regulated Contexts",
+        link: "https://arxiv.org/abs/2605.12105",
+        note: "Cuts through the autonomy hype with a practical design space: autonomy and agency are coupled, and higher autonomy demands tighter agency constraints or you lose recovery capability. The architectural tactics — checkpoints, escalation gates, tool fencing — map directly to how I think about policy engines in production agent deployments."
     },
     {
         id: 2,
@@ -155,9 +189,97 @@ export const FEED_ITEMS = [
         title: "Fit Cycle: A new way to describe Netflix culture",
         link: "https://netflixtechblog.com",
         note: "Chaos Engineering isn't about breaking things; it's about revealing the truth of the system. If you don't test failure, you're just hoping for success."
+    },
+    {
+        id: 6,
+        source: "ArXiv",
+        topic: "AI Memory",
+        title: "Memory for Autonomous LLM Agents: Mechanisms, Evaluation, and Emerging Frontiers",
+        link: "https://arxiv.org/abs/2603.07670",
+        note: "Formalizes agent memory as a write-manage-read loop across five mechanism families. The key insight: if your memory system only performs well in single-session tests, it's not actually persistent memory. This is the framework I now use to evaluate whether a memory implementation is real."
+    },
+    {
+        id: 7,
+        source: "ArXiv",
+        topic: "AI Governance",
+        title: "Policy-as-Prompt: Turning AI Governance Rules into Guardrails for AI Agents",
+        link: "https://arxiv.org/abs/2509.23994",
+        note: "Operationalizes governance rules directly into agent behavior via prompt-based guardrails — treating compliance as architecture, not audit. The alternative (audit logs and post-hoc review) is just hoping nothing goes wrong."
     }
 ];
 
+
+export const AI_LAB_ITEMS = [
+    {
+        id: 'lab-1',
+        title: "AI Agent Development",
+        category: "AI Engineering",
+        built: "Active · Q1 2026",
+        tags: ["TypeScript", "Node.js", "Ollama", "LanceDB", "Local LLM"],
+        image: "https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=1000&auto=format&fit=crop",
+        description: "Self-hosted autonomous agent runtime with persistent cognitive memory, local-only LLM inference, and a policy engine with human-in-the-loop approval gates. Zero cloud dependency.",
+        content: `A fully local autonomous agent built to run alongside daily work — no API keys, no cloud calls, no data leaving the machine.
+
+Stack: Node.js 22 + TypeScript (strict mode), Ollama for local LLM inference, LanceDB for vector-based persistent memory, SQLite for structured state, and Discord as the primary interface with a WebChat fallback.
+
+Key architectural decisions:
+
+Memory architecture: Three tiers — in-context (short-term scratchpad), episodic (recent interactions indexed by vector similarity), and semantic (synthesized facts extracted via a nightly dream cycle). Memory is not stored raw; it's distilled, tagged, and re-ranked at retrieval time.
+
+Policy engine: Every agent action is classified by reversibility and risk level. Actions above a defined threshold require explicit human approval before execution. This prevents the agent from making consequential decisions autonomously while still enabling meaningful delegation.
+
+Autonomy monitoring: An anomaly detection layer tracks when the agent's behavior deviates from baseline patterns, triggering a circuit breaker that escalates to human review.
+
+The core lesson: the model capability matters far less than the architecture around it. This project is fundamentally about orchestration, memory design, and guardrails — not prompt engineering.`
+    },
+    {
+        id: 'lab-2',
+        title: "AI Memory & Context Management",
+        category: "AI Engineering",
+        built: "Active · Q2 2026",
+        tags: ["Gemini", "Firebase", "Cloud Functions", "Vector Search", "Embeddings"],
+        image: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?q=80&w=1000&auto=format&fit=crop",
+        description: "Research project exploring long-term AI memory architecture: semantic vector storage, autonomous nightly synthesis agents, and multi-model context routing with biometric and behavioral signals.",
+        content: `A research project built to answer a specific question: what does it actually take to give an AI system persistent, intelligent memory across sessions?
+
+Stack: React 19 + TypeScript frontend, Firebase (Auth + Firestore with native Vector Search), Google Gemini Pro/Flash via the GenAI SDK, Cloud Functions Gen 2 (Node.js 22) for autonomous background agents, and text-embedding-004 for semantic encoding.
+
+Memory architecture:
+- The Vault: A semantic memory store indexed by text-embedding-004 vectors. Memories are retrieved by cosine similarity, not keyword match, with emotional and temporal weighting applied at re-ranking time.
+- The Dream: An autonomous Cloud Function that runs nightly, reviews the day's interactions, extracts durable insights, and writes synthesized memory entries back to Firestore.
+- Staleness scoring: Memories decay in retrieval weight over time unless reinforced by new interactions, preventing the system from acting on outdated context.
+
+Multi-model routing: Requests are routed between Gemini Pro (complex reasoning, synthesis) and Gemini Flash (low-latency retrieval, routine tasks) based on complexity scoring — optimizing for both quality and cost.
+
+Biometric integration: Fitbit data (HRV, sleep quality, resting heart rate) is ingested and used to weight the emotional context of memory retrieval — an experiment in whether physiological state should inform AI response calibration.
+
+The finding: the hard problem isn't storage or retrieval — it's synthesis. Raw context is noise. The value is in what gets extracted, compressed, and made searchable.`
+    },
+    {
+        id: 'lab-3',
+        title: "This Portfolio — Live AI Application",
+        category: "AI Engineering",
+        built: "Live · 2026",
+        tags: ["Gemini API", "Firebase", "Vector Search", "React"],
+        image: "https://images.unsplash.com/photo-1537432376769-00f5c2f4c8d2?q=80&w=1000&auto=format&fit=crop",
+        description: "This site is itself a live AI application. An authenticated assistant uses the Gemini API, Firebase, and vector-indexed content to answer questions about my work in real time.",
+        content: `The portfolio you're reading is also a working AI system — not a mockup, not a demo environment. The AI Chat feature (accessible via login) is a production deployment of the following stack:
+
+AI layer: Gemini API (Google) with a custom system prompt grounded in structured context about my career, projects, blog posts, and expertise areas.
+
+Memory and context: All portfolio content is vector-indexed and injected as context at query time. The assistant knows about specific projects, can discuss trade-offs I've made, and can answer questions that require synthesizing across multiple content types.
+
+Auth and access: Firebase Authentication gates the chat interface. This is intentional — it's a signal, not a barrier. A visitor who wants to engage deeply enough to log in is a visitor worth having a real conversation with.
+
+Infrastructure: React frontend, Firebase for auth and content delivery, Firestore for dynamic content management (blog posts, projects, and expertise areas can be updated without a redeploy via the admin panel).
+
+The point of building it this way: if I'm going to claim fluency with AI systems, the most honest proof is deploying one publicly. This site exists as both a portfolio and a working artifact.`
+    }
+];
+
+export const CURRENT_STACK = [
+    "Ollama", "LanceDB", "Gemini API", "Firebase", "SDXL"
+];
 
 export const ABOUT_ME = {
     title: "About Raphael J. Edwards",

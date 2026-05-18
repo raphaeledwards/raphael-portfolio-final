@@ -19,7 +19,7 @@ import ReactionButton from './components/ReactionButton'; // Engagement Componen
 
 // --- DATA ---
 // --- DATA ---
-import { PROJECT_ITEMS as INITIAL_PROJECTS, EXPERTISE_AREAS as INITIAL_EXPERTISE, BLOG_POSTS as INITIAL_BLOGS, FEED_ITEMS, NAV_LINKS } from './data/portfolioData';
+import { PROJECT_ITEMS as INITIAL_PROJECTS, EXPERTISE_AREAS as INITIAL_EXPERTISE, BLOG_POSTS as INITIAL_BLOGS, FEED_ITEMS, NAV_LINKS, AI_LAB_ITEMS, CURRENT_STACK } from './data/portfolioData';
 import { SOURCE_CODE_MANIFEST } from './data/sourceCodeManifest';
 import { fetchContent } from './services/contentService';
 
@@ -217,7 +217,7 @@ const App = () => {
             <div className="absolute inset-0 opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/circuit-board.png')]"></div>
           </div>
           <div className="relative z-10 px-6 max-w-5xl mx-auto mt-16 text-center">
-            <div className="inline-block px-3 py-1 mb-6 border border-rose-500/30 rounded-full bg-rose-500/10 text-rose-500 text-xs font-bold tracking-widest uppercase">Technology Leadership</div>
+            <div className="inline-block px-3 py-1 mb-6 border border-rose-500/30 rounded-full bg-rose-500/10 text-rose-500 text-xs font-bold tracking-widest uppercase">Technology Leadership · AI Practitioner</div>
             <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter mb-8 leading-none">BUILDING <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-500 to-orange-600">RESILIENT TEAMS.</span> <br />SOLVING <span className="text-white">COMPLEX PROBLEMS.</span></h1>
             <p className="text-lg md:text-2xl text-neutral-400 mb-10 max-w-2xl mx-auto leading-relaxed font-light border-l-4 border-rose-600 pl-6 text-left">Technology Executive & Services Architect based in Boston.</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -238,6 +238,14 @@ const App = () => {
                 <div className="flex gap-6">
                   <a href="https://www.linkedin.com/in/raphaeljedwards/" className="flex items-center gap-2 text-white hover:text-rose-500 transition-colors font-bold"><Linkedin size={20} /> LinkedIn</a>
                   <a href="https://github.com/raphaeledwards" className="flex items-center gap-2 text-white hover:text-rose-500 transition-colors font-bold"><Globe size={20} /> Github</a>
+                </div>
+                <div className="mt-10 pt-8 border-t border-neutral-800">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-600 mb-4">Currently Building With</p>
+                  <div className="flex flex-wrap gap-2">
+                    {CURRENT_STACK.map(tool => (
+                      <span key={tool} className="px-3 py-1.5 text-xs font-mono font-bold bg-neutral-900 border border-neutral-800 text-neutral-400 rounded hover:border-rose-500/40 hover:text-rose-400 transition-colors cursor-default">{tool}</span>
+                    ))}
+                  </div>
                 </div>
               </div>
               <div className="relative order-1 md:order-2">
@@ -284,7 +292,13 @@ const App = () => {
                     onClick={() => setActiveWorkTab('work')}
                     className={`pb-4 text-sm font-bold uppercase tracking-wider transition-all ${activeWorkTab === 'work' ? 'text-rose-500 border-b-2 border-rose-500' : 'text-neutral-500 hover:text-white'}`}
                   >
-                    Selected Projects
+                    Career Impact
+                  </button>
+                  <button
+                    onClick={() => setActiveWorkTab('lab')}
+                    className={`pb-4 text-sm font-bold uppercase tracking-wider transition-all ${activeWorkTab === 'lab' ? 'text-rose-500 border-b-2 border-rose-500' : 'text-neutral-500 hover:text-white'}`}
+                  >
+                    AI Lab
                   </button>
                   <button
                     onClick={() => setActiveWorkTab('feed')}
@@ -298,6 +312,11 @@ const App = () => {
               {activeWorkTab === 'work' && (
                 <div className="flex flex-wrap gap-2">
                   {["All", ...new Set(projectItems.map(item => item.category))].map(cat => <button key={cat} onClick={() => setActiveCategory(cat)} className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${activeCategory === cat ? 'bg-rose-600 text-white' : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white'}`}>{cat}</button>)}
+                </div>
+              )}
+              {activeWorkTab === 'lab' && (
+                <div className="flex items-center gap-2 text-xs font-mono text-neutral-600 border border-neutral-800 px-3 py-2 rounded">
+                  <span className="w-2 h-2 rounded-full bg-rose-600 inline-block"></span> Personal builds · Independent research
                 </div>
               )}
             </div>
@@ -321,7 +340,50 @@ const App = () => {
               </div>
             )}
 
-            {/* Tab 2: Director's Cut Feed */}
+            {/* Tab 2: AI Lab */}
+            {activeWorkTab === 'lab' && (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <p className="text-neutral-500 text-sm mb-10 border-l-2 border-neutral-800 pl-4 italic max-w-2xl">
+                  Personal AI systems built independently — proof of hands-on fluency with the stack, not just leadership over it.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {AI_LAB_ITEMS.map((item) => (
+                    <div key={item.id} className="group flex flex-col bg-neutral-950 rounded-xl overflow-hidden border border-neutral-800 hover:border-rose-500/30 transition-all cursor-pointer" onClick={() => handleViewItem({ ...item, type: 'project' })}>
+                      {/* Terminal-style header bar */}
+                      <div className="bg-neutral-900 px-4 py-2.5 flex items-center justify-between border-b border-neutral-800">
+                        <div className="flex items-center gap-2">
+                          <div className="flex gap-1.5">
+                            <div className="w-2.5 h-2.5 rounded-full bg-neutral-700"></div>
+                            <div className="w-2.5 h-2.5 rounded-full bg-neutral-700"></div>
+                            <div className="w-2.5 h-2.5 rounded-full bg-rose-600/70"></div>
+                          </div>
+                          <span className="text-[10px] text-neutral-600 font-mono ml-2 uppercase tracking-widest">{item.category}</span>
+                        </div>
+                        {item.built && <span className="text-[10px] text-neutral-600 font-mono uppercase tracking-widest">{item.built}</span>}
+                      </div>
+                      <div className="relative h-48 overflow-hidden">
+                        <img src={item.image} alt={item.title} className="w-full h-full object-cover grayscale opacity-50 group-hover:opacity-70 group-hover:grayscale-0 transition-all duration-700" />
+                        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-neutral-950/90" />
+                      </div>
+                      <div className="p-6 flex-1 flex flex-col">
+                        <h3 className="text-lg font-bold text-white mb-2 group-hover:text-rose-500 transition-colors">{item.title}</h3>
+                        <p className="text-neutral-400 text-sm leading-relaxed mb-5 flex-1">{item.description}</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {item.tags.map(tag => (
+                            <span key={tag} className="text-[10px] font-mono font-bold uppercase tracking-wider bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2 py-1 rounded">{tag}</span>
+                          ))}
+                        </div>
+                        <div className="flex items-center text-xs font-bold text-neutral-500 mt-5 group-hover:text-rose-500 transition-colors">
+                          View Details <ChevronRight size={14} className="ml-1" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Tab 3: Director's Cut Feed */}
             {activeWorkTab === 'feed' && (
               <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <p className="text-neutral-400 mb-8 italic border-l-2 border-neutral-800 pl-4">
