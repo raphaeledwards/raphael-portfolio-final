@@ -1,22 +1,15 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-
-// Initialize GenAI Lazily
-let genAI = null;
-
 // Simple in-memory cache to prevent redundant API calls
 const embeddingCache = new Map();
 
 /**
- * Generates a vector embedding for the given text using Gemini.
- * Uses the 'embedding-001' or 'text-embedding-004' model.
+ * Generates a vector embedding for the given text via the server-side /api/embed
+ * function (keeps the Gemini API key out of the client bundle).
  * Caches results to improve performance.
- * @param {string} text 
+ * @param {string} text
  * @returns {Promise<number[]>} The embedding vector
  */
 export const getEmbedding = async (text) => {
-    if (!text || !GEMINI_API_KEY) return null;
+    if (!text) return null;
 
     // Check Cache
     if (embeddingCache.has(text)) {
@@ -25,17 +18,18 @@ export const getEmbedding = async (text) => {
     }
 
     try {
-        if (!genAI) {
-            genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-        }
-        const model = genAI.getGenerativeModel({ model: "text-embedding-004" });
-        const result = await model.embedContent(text);
-        const embedding = result.embedding.values;
+        const response = await fetch('/api/embed', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Embedding request failed');
 
         // Update Cache
-        embeddingCache.set(text, embedding);
+        embeddingCache.set(text, data.embedding);
 
-        return embedding;
+        return data.embedding;
     } catch (error) {
         console.error("❌ Error generating embedding:", { textPreview: text.substring(0, 20), errorMsg: error.message, fullError: error });
         return null;
