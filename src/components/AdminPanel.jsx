@@ -16,7 +16,7 @@ const AdminPanel = ({ isOpen, onClose, onRefreshData }) => {
     const ALLOWED_EMAILS = envEmails.split(',').map(e => e.trim()).filter(Boolean); // Filter out empty strings
 
     // Check if user is authorized
-    const isAuthorized = auth.currentUser && ALLOWED_EMAILS.includes(auth.currentUser.email);
+    const isAuthorized = auth?.currentUser && ALLOWED_EMAILS.includes(auth.currentUser.email);
 
     // Fetch logs on tab switch
     React.useEffect(() => {
@@ -31,7 +31,7 @@ const AdminPanel = ({ isOpen, onClose, onRefreshData }) => {
     if (!isOpen) return null;
 
     const handleSeed = async () => {
-        if (!auth.currentUser) return;
+        if (!auth?.currentUser) return;
         if (!window.confirm("Overwrite Firestore database with local content? This cannot be undone.")) return;
 
         setSeedingStatus('seeding');
@@ -95,8 +95,8 @@ const AdminPanel = ({ isOpen, onClose, onRefreshData }) => {
                         <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Authenticated User</h3>
                         <div className="flex items-center justify-between">
                             <div className="flex flex-col">
-                                <p className="font-mono text-green-500 truncate">{auth.currentUser?.email || 'Unknown User'}</p>
-                                <p className="font-mono text-[10px] text-neutral-500 select-all">UID: {auth.currentUser?.uid}</p>
+                                <p className="font-mono text-green-500 truncate">{auth?.currentUser?.email || 'Unknown User'}</p>
+                                <p className="font-mono text-[10px] text-neutral-500 select-all">UID: {auth?.currentUser?.uid}</p>
                             </div>
                             <button
                                 onClick={handleLogout}
