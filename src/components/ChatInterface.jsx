@@ -5,9 +5,6 @@ import { systemPrompt as externalSystemPrompt } from '../data/resumeContext';
 import { getContextualData, logChatEntry, SECTION_SUGGESTIONS, DEV_SUGGESTIONS } from '../utils/chatUtils';
 import { ABOUT_ME } from '../data/portfolioData';
 
-// 2. GEMINI API KEY
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
-
 const ChatInterface = ({ user, projects, expertise, blogs, sourceCodes, onClose, activeSection, onLogout }) => {
     const STORAGE_KEY = `chat_history_${user?.uid || 'guest'}`;
 
@@ -66,21 +63,6 @@ const ChatInterface = ({ user, projects, expertise, blogs, sourceCodes, onClose,
         setInputValue("");
         setIsTyping(true);
 
-        // Standard Gemini API Key from environment
-        const apiKey = GEMINI_API_KEY;
-
-        if (!apiKey) {
-            // 1. UI ERROR STATE (Hardening)
-            setMessages(prev => [...prev, {
-                role: 'assistant',
-                text: "⚠️ SYSTEM ALERT: AI Configuration Missing.\n\nPlease check your .env file and ensure VITE_GEMINI_API_KEY is set."
-            }]);
-            setIsTyping(false);
-            return;
-        }
-
-        const targetModel = "gemini-2.5-flash";
-
         // 2. AUGMENTATION: Build the final prompt by combining the persona and the relevant data
 
         // 1. RETRIEVAL: Pull context based on the current user input
@@ -123,20 +105,16 @@ const ChatInterface = ({ user, projects, expertise, blogs, sourceCodes, onClose,
             // *Correction*: To keep this simple and functional without deep refactoring, we will perform a fetch here. 
             // Since 'messages' is a dependency, this callback will regenerate on every message, which is fine.
 
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${apiKey}`, {
+            const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [
-                        { role: 'user', parts: [{ text: finalSystemPrompt }] }
-                    ]
-                })
+                body: JSON.stringify({ prompt: finalSystemPrompt })
             });
 
             const data = await response.json();
-            if (data.error) throw new Error(data.error.message);
+            if (!response.ok) throw new Error(data.error || 'Request failed');
 
-            aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || aiResponse;
+            aiResponse = data.text || aiResponse;
             setMessages(prev => [...prev, { role: 'assistant', text: aiResponse, confidence }]);
 
         } catch (error) {
