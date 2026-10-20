@@ -36,8 +36,10 @@ try {
 
 } catch (error) {
   console.error("Firebase Initialization Error:", error);
-  // Export dummy objects to prevent import errors in App.jsx
-  auth = { currentUser: null };
+  // Keep these falsy (not a truthy dummy object) so `if (auth)` guards elsewhere
+  // correctly skip real Firebase SDK calls like onAuthStateChanged, which throw
+  // if handed something that isn't a real Auth instance.
+  auth = null;
   db = null;
   googleProvider = null;
 }
