@@ -1,0 +1,65 @@
+// Vercel Routing Middleware (file-convention: middleware.js at repo root,
+// Node.js runtime by default). Serves a Markdown twin of a page when the
+// request's Accept header prefers text/markdown, and a real 404 status with
+// Markdown content for unknown paths under the same negotiation. Everything
+// else passes through untouched - plain HTML requests never hit the fetches
+// below.
+//
+// Docs checked 2026-10-21: https://vercel.com/docs/routing-middleware,
+// https://vercel.com/docs/routing-middleware/js-reference
+import { next } from '@vercel/functions';
+
+export const config = {
+    // Skip the two highest-traffic static prefixes outright; the in-function
+    // dot-extension check below (runs on every other request) is what
+    // actually excludes all static assets, including the .md files this
+    // middleware itself fetches, which prevents re-triggering on them.
+    matcher: ['/((?!api/|assets/).*)']
+};
+
+function wantsMarkdown(request) {
+    const accept = request.headers.get('accept') || '';
+    return accept.includes('text/markdown');
+}
+
+function mdPathFor(pathname) {
+    const clean = pathname.replace(/\/+$/, '') || '/';
+    return clean === '/' ? '/index.md' : `${clean}.md`;
+}
+
+export default async function middleware(request) {
+    const url = new URL(request.url);
+
+    // Only negotiate on clean route paths (no extension) - anything with a
+    // dot is a real static asset (.js, .css, .png, .md, .xml, ...) and must
+    // never be intercepted, including the .md files fetched below.
+    if (url.pathname.includes('.') || !wantsMarkdown(request)) {
+        return next();
+    }
+
+    const mdUrl = new URL(mdPathFor(url.pathname), url.origin);
+    const mdResponse = await fetch(mdUrl);
+
+    if (mdResponse.ok) {
+        const body = await mdResponse.text();
+        return new Response(body, {
+            status: 200,
+            headers: {
+                'Content-Type': 'text/markdown; charset=utf-8',
+                'Vary': 'Accept'
+            }
+        });
+    }
+
+    const notFoundUrl = new URL('/404.md', url.origin);
+    const notFoundResponse = await fetch(notFoundUrl);
+    const notFoundBody = notFoundResponse.ok ? await notFoundResponse.text() : '# Not Found\n';
+
+    return new Response(notFoundBody, {
+        status: 404,
+        headers: {
+            'Content-Type': 'text/markdown; charset=utf-8',
+            'Vary': 'Accept'
+        }
+    });
+}
