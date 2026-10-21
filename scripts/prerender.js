@@ -8,6 +8,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { mdPathFor } from '../lib/mdPath.js';
 import {
     PROJECT_ITEMS,
     EXPERTISE_AREAS,
@@ -41,8 +42,6 @@ const paragraphs = (text = '') => text
     .filter(Boolean)
     .map(p => `<p>${esc(p)}</p>`)
     .join('\n');
-
-const mdPathFor = (routePath) => routePath === '/' ? '/index.md' : `${routePath}.md`;
 
 const NAV_ITEMS = [
     { href: '/', label: 'Home' },

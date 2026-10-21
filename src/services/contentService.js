@@ -126,8 +126,18 @@ export const clearChatLogs = async () => {
 
 /**
  * Seeds the Firestore database with local data.
- * WARNING: Overwrites existing data with matching IDs (if we strictly used IDs), 
+ * WARNING: Overwrites existing data with matching IDs (if we strictly used IDs),
  * but here we use batch writes for efficiency.
+ *
+ * ROUTING NOTE: this only ever mirrors PROJECT_ITEMS/EXPERTISE_AREAS/BLOG_POSTS
+ * verbatim, so Firestore never has a blog post the static build (scripts/prerender.js)
+ * doesn't also know about - that's what makes it safe for vercel.json to have no
+ * SPA-fallback rewrite (removed so unknown paths get a real 404, per
+ * AGENT_READINESS_PLAN.md Phase 2). If this function ever starts writing posts that
+ * don't also exist in portfolioData.js (e.g. an "add new post" admin feature), a
+ * /blog/<slug> for one of those posts will hard-404 before the SPA can fetch it from
+ * Firestore - vercel.json would need a rewrite scoped to /blog/:slug paths that have
+ * no matching static file.
  */
 export const seedDatabase = async () => {
     if (!db) throw new Error("Firestore not initialized");

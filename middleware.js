@@ -8,6 +8,7 @@
 // Docs checked 2026-10-21: https://vercel.com/docs/routing-middleware,
 // https://vercel.com/docs/routing-middleware/js-reference
 import { next } from '@vercel/functions';
+import { mdPathFor } from './lib/mdPath.js';
 
 export const config = {
     // Skip the two highest-traffic static prefixes outright; the in-function
@@ -20,11 +21,6 @@ export const config = {
 function wantsMarkdown(request) {
     const accept = request.headers.get('accept') || '';
     return accept.includes('text/markdown');
-}
-
-function mdPathFor(pathname) {
-    const clean = pathname.replace(/\/+$/, '') || '/';
-    return clean === '/' ? '/index.md' : `${clean}.md`;
 }
 
 export default async function middleware(request) {
