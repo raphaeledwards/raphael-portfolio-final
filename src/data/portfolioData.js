@@ -221,69 +221,70 @@ export const FEED_ITEMS = [
 
 export const AI_LAB_ITEMS = [
     {
+        id: 'lab-4',
+        title: "Race Engineer (Sim Racing AI)",
+        category: "AI Engineering",
+        built: "Active · Q4 2026",
+        tags: ["Python", "Local AI", "Real-Time Telemetry", "Voice", "Rules Engine"],
+        image: "https://images.unsplash.com/photo-1590450175845-897484157f46?q=80&w=1000&auto=format&fit=crop",
+        description: "A real-time race engineer that watches every lap a driver runs and coaches them by voice — what they're doing wrong in each corner, when to pit, when traffic matters — built entirely local, with no cloud service and no LLM making the actual coaching decisions.",
+        content: `Most racing games already show a driver how much time they're losing, lap over lap. They don't explain why. This project is a race engineer that fills that gap — watching live telemetry as the driver drives, deciding what's actually worth saying, and speaking it out loud at the moment it matters.
+
+The first lesson was not to trust the data at face value. The game's own on-screen timer turned out to be off by a full 40 seconds — a reminder that any system built on top of someone else's instrumentation has to independently verify what it's being told before acting on it. The telemetry feed has a second, quieter failure mode: it can keep reporting numbers for several seconds after the game has actually closed. Both problems meant building verification into the system itself, rather than trusting the upstream source.
+
+The coaching decisions are deliberately not made by a language model. Every call the system makes — braked too early, too much speed into the corner, fuel running short — comes from a rules engine built on thresholds pulled from real recorded sessions, not a generative guess. An LLM shows up in exactly one place: giving the system a natural, human voice. It's a conscious bet against the current trend of routing everything through a chatbot — the judgment stays deterministic and auditable; AI is reserved for the one job it's actually good at.
+
+It also reasons about race context the way a human engineer would: recognizing when a driver was defending against another car rather than simply driving badly, telling a lapped backmarker from a close rival, and managing fuel strategy through a race even when the game provides no reliable way to know how much time is left — a gap only found by exhaustively testing the telemetry feed itself.
+
+The lesson: a system can earn the label "AI" without outsourcing its judgment to one. The harder and more valuable work is deciding what's true, what's worth saying, and when to say it. AI is just the voice.`
+    },
+    {
         id: 'lab-1',
         title: "AI Agent Development",
         category: "AI Engineering",
         built: "Active · Q1 2026",
-        tags: ["TypeScript", "Node.js", "Ollama", "LanceDB", "Local LLM"],
+        tags: ["TypeScript", "Local LLM", "Persistent Memory", "Policy Engine"],
         image: "https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=1000&auto=format&fit=crop",
-        description: "Self-hosted autonomous agent runtime with persistent cognitive memory, local-only LLM inference, and a policy engine with human-in-the-loop approval gates. Zero cloud dependency.",
-        content: `A fully local autonomous agent built to run alongside daily work — no API keys, no cloud calls, no data leaving the machine.
+        description: "Self-hosted autonomous agent runtime with persistent memory and a policy layer that decides, action by action, which of its own decisions it's allowed to make alone. Zero cloud dependency.",
+        content: `Most "autonomous agent" demos stop at a clever prompt. This one had to survive actually running unattended, day after day, with no cloud fallback and no one watching it constantly.
 
-Stack: Node.js 22 + TypeScript (strict mode), Ollama for local LLM inference, LanceDB for vector-based persistent memory, SQLite for structured state, and Discord as the primary interface with a WebChat fallback.
+The hardest problem wasn't capability, it was memory. An agent that forgets everything between sessions isn't useful — but one that remembers everything raw drowns in its own history. The fix was a tiered system: a short-term scratchpad for the task at hand, a recent-history layer indexed by relevance rather than recency, and a nightly process that reviews the day and distills the parts worth keeping. Nothing is stored or recalled raw — it's synthesized first.
 
-Key architectural decisions:
+The second problem was trust. Every action the agent considers is classified by how reversible and how risky it is. Anything above a defined threshold stops and waits for a human decision before it executes — a scoped restriction, not a blanket one, so the agent still acts independently on the large majority of routine work. A separate layer watches the agent's own behavior over time, flagging drift from its established patterns and halting for review before a small deviation becomes a real problem.
 
-Memory architecture: Three tiers — in-context (short-term scratchpad), episodic (recent interactions indexed by vector similarity), and semantic (synthesized facts extracted via a nightly dream cycle). Memory is not stored raw; it's distilled, tagged, and re-ranked at retrieval time.
-
-Policy engine: Every agent action is classified by reversibility and risk level. Actions above a defined threshold require explicit human approval before execution. This prevents the agent from making consequential decisions autonomously while still enabling meaningful delegation.
-
-Autonomy monitoring: An anomaly detection layer tracks when the agent's behavior deviates from baseline patterns, triggering a circuit breaker that escalates to human review.
-
-The core lesson: the model capability matters far less than the architecture around it. This project is fundamentally about orchestration, memory design, and guardrails — not prompt engineering.`
+The lesson: the model is the easy part. What actually makes an autonomous system trustworthy enough to leave running is the architecture around it — memory that's curated instead of dumped, and guardrails that scale permission to risk.`
     },
     {
         id: 'lab-2',
         title: "AI Memory & Context Management",
         category: "AI Engineering",
         built: "Active · Q2 2026",
-        tags: ["Gemini", "Firebase", "Cloud Functions", "Vector Search", "Embeddings"],
+        tags: ["Gemini", "Vector Search", "AI Memory", "Multi-Model Routing"],
         image: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?q=80&w=1000&auto=format&fit=crop",
-        description: "Research project exploring long-term AI memory architecture: semantic vector storage, autonomous nightly synthesis agents, and multi-model context routing with biometric and behavioral signals.",
-        content: `A research project built to answer a specific question: what does it actually take to give an AI system persistent, intelligent memory across sessions?
+        description: "A research project asking a focused question: what does it actually take to give an AI system memory that's genuinely persistent — not just a longer context window, but something that gets better at knowing what matters over time?",
+        content: `Most "AI memory" is really just a bigger context window — stuff more text in and hope the model finds the signal. This project treats memory as something that has to be actively managed: written, curated, decayed, and re-synthesized, not just stored.
 
-Stack: React 19 + TypeScript frontend, Firebase (Auth + Firestore with native Vector Search), Google Gemini Pro/Flash via the GenAI SDK, Cloud Functions Gen 2 (Node.js 22) for autonomous background agents, and text-embedding-004 for semantic encoding.
+The system holds a semantic memory store, retrieved by meaning rather than exact wording, and an autonomous process that runs every night reviewing the day's interactions and distilling the parts worth keeping into durable, searchable entries. Older memories lose weight over time unless something reinforces them, so the system never acts on context that's gone stale.
 
-Memory architecture:
-- The Vault: A semantic memory store indexed by text-embedding-004 vectors. Memories are retrieved by cosine similarity, not keyword match, with emotional and temporal weighting applied at re-ranking time.
-- The Dream: An autonomous Cloud Function that runs nightly, reviews the day's interactions, extracts durable insights, and writes synthesized memory entries back to Firestore.
-- Staleness scoring: Memories decay in retrieval weight over time unless reinforced by new interactions, preventing the system from acting on outdated context.
+Requests are also routed between a faster, cheaper model for routine retrieval and a more capable one for genuine synthesis, based on how complex the task actually is — treating cost and quality as a judgment call per request, not a fixed setting. A further experiment layers in physiological signal — resting heart rate, sleep quality — as a weighting input on memory retrieval, testing whether an AI system's sense of context should account for the state of the person it's talking to, not just what they said.
 
-Multi-model routing: Requests are routed between Gemini Pro (complex reasoning, synthesis) and Gemini Flash (low-latency retrieval, routine tasks) based on complexity scoring — optimizing for both quality and cost.
-
-Biometric integration: Fitbit data (HRV, sleep quality, resting heart rate) is ingested and used to weight the emotional context of memory retrieval — an experiment in whether physiological state should inform AI response calibration.
-
-The finding: the hard problem isn't storage or retrieval — it's synthesis. Raw context is noise. The value is in what gets extracted, compressed, and made searchable.`
+The finding: storage and retrieval were never the hard part. The hard part is synthesis — deciding what's actually worth remembering. Raw context is noise; the value is entirely in what gets extracted and compressed.`
     },
     {
         id: 'lab-3',
         title: "This Portfolio — Live AI Application",
         category: "AI Engineering",
         built: "Live · 2026",
-        tags: ["Gemini API", "Firebase", "Vector Search", "React"],
+        tags: ["Gemini API", "Vector Search", "React", "Live Product"],
         image: "https://images.unsplash.com/photo-1537432376769-00f5c2f4c8d2?q=80&w=1000&auto=format&fit=crop",
-        description: "This site is itself a live AI application. An authenticated assistant uses the Gemini API, Firebase, and vector-indexed content to answer questions about my work in real time.",
-        content: `The portfolio you're reading is also a working AI system — not a mockup, not a demo environment. The AI Chat feature (accessible via login) is a production deployment of the following stack:
+        description: "This site is itself a working AI application, not a mockup. Behind the login is an assistant that actually knows this portfolio's content and can answer real questions about the work in it.",
+        content: `Anyone can claim AI fluency on a resume. The most honest proof is deploying something real and leaving it running in public, where it has to actually work.
 
-AI layer: Gemini API (Google) with a custom system prompt grounded in structured context about my career, projects, blog posts, and expertise areas.
+The assistant is grounded in the real content of this site — every project, post, and area of expertise is indexed and pulled in as context at query time, so it can discuss specific trade-offs and synthesize across topics instead of giving generic answers.
 
-Memory and context: All portfolio content is vector-indexed and injected as context at query time. The assistant knows about specific projects, can discuss trade-offs I've made, and can answer questions that require synthesizing across multiple content types.
+Access sits behind a login, deliberately. That's not a barrier, it's a filter — a visitor curious enough to create an account is a visitor worth having a real conversation with. The underlying content can be updated live through an admin panel, without a redeploy, so the site stays current the same way any real product does.
 
-Auth and access: Firebase Authentication gates the chat interface. This is intentional — it's a signal, not a barrier. A visitor who wants to engage deeply enough to log in is a visitor worth having a real conversation with.
-
-Infrastructure: React frontend, Firebase for auth and content delivery, Firestore for dynamic content management (blog posts, projects, and expertise areas can be updated without a redeploy via the admin panel).
-
-The point of building it this way: if I'm going to claim fluency with AI systems, the most honest proof is deploying one publicly. This site exists as both a portfolio and a working artifact.`
+The point of building it this way: if I'm going to claim fluency with AI systems, the most honest proof is running one in public, not describing one in a slide.`
     }
 ];
 
