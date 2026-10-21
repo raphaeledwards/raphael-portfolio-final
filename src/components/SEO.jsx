@@ -7,7 +7,7 @@ const SEO = ({ title, description, keywords, image, url, type = 'website' }) => 
     const siteDescription = "Portfolio of Raphael J. Edwards, a Boston-based Technology Executive and Services Architect specializing in building resilient teams and solving complex problems.";
     const siteKeywords = "Raphael J. Edwards, Technology Executive, Services Architect, Boston, Cybersecurity, Cloud Computing, Digital Transformation, Engineering Leadership";
     const siteUrl = "https://raphaeljedwards.com";
-    const siteImage = "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1000&auto=format&fit=crop";
+    const siteImage = "https://raphaeljedwards.com/og-image.png";
 
     // Computed values
     const metaTitle = title ? `${title} | Raphael J. Edwards` : siteTitle;

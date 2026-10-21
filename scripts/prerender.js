@@ -25,7 +25,7 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DIST = path.join(__dirname, '../dist');
 const SITE_URL = 'https://raphaeljedwards.com';
-const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1000&auto=format&fit=crop';
+const DEFAULT_IMAGE = `${SITE_URL}/og-image.png`;
 const BUILD_DATE = new Date().toISOString().slice(0, 10);
 
 const shellTemplate = fs.readFileSync(path.join(DIST, 'index.html'), 'utf-8');
@@ -110,6 +110,18 @@ function injectHead(html, { title, description, canonicalPath, ogType = 'website
         /<meta property="og:image" content="[^"]*"\s*\/>/,
         `<meta property="og:image" content="${esc(DEFAULT_IMAGE)}" />`
     );
+    out = out.replace(
+        /<meta name="twitter:title" content="[^"]*"\s*\/>/,
+        `<meta name="twitter:title" content="${esc(title)}" />`
+    );
+    out = out.replace(
+        /<meta name="twitter:description" content="[^"]*"\s*\/>/,
+        `<meta name="twitter:description" content="${esc(description)}" />`
+    );
+    out = out.replace(
+        /<meta name="twitter:image" content="[^"]*"\s*\/>/,
+        `<meta name="twitter:image" content="${esc(DEFAULT_IMAGE)}" />`
+    );
 
     const headInject = `    <link rel="canonical" href="${canonicalUrl}" />
     <link rel="alternate" type="text/markdown" href="${mdUrl}" />
@@ -121,6 +133,35 @@ ${extraHead}  </head>`;
 
 function injectBody(html, bodyHtml) {
     return html.replace('<div id="root"></div>', `<div id="root">${bodyHtml}</div>`);
+}
+
+function websiteJsonLd() {
+    return `    <script type="application/ld+json">
+    ${JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'WebSite',
+        name: 'Raphael J. Edwards',
+        url: SITE_URL,
+        publisher: { '@id': `${SITE_URL}/#person` }
+    }, null, 2)}
+    </script>
+`;
+}
+
+function breadcrumbJsonLd(items) {
+    return `    <script type="application/ld+json">
+    ${JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: items.map((item, i) => ({
+            '@type': 'ListItem',
+            position: i + 1,
+            name: item.name,
+            item: `${SITE_URL}${item.path}`
+        }))
+    }, null, 2)}
+    </script>
+`;
 }
 
 const generatedMarkdown = [];
@@ -211,7 +252,7 @@ ${KEY_ACHIEVEMENTS.slice(0, 5).map(a => `- ${a}`).join('\n')}
 - [Contact](${SITE_URL}/contact)
 `;
 
-    writeRoute('/', { title, description, ogType: 'website', bodyHtml: body, markdown: md });
+    writeRoute('/', { title, description, ogType: 'website', extraHead: websiteJsonLd(), bodyHtml: body, markdown: md });
 }
 
 function aboutPage() {
@@ -281,7 +322,8 @@ ${CERTIFICATIONS.map(c => `- ${c.name} (${c.period})`).join('\n')}
 ${RECOGNITION.map(r => `- ${r.name}, ${r.year}${r.note ? ` — ${r.note}` : ''}`).join('\n')}
 `;
 
-    writeRoute('/about', { title, description, ogType: 'profile', bodyHtml: body, markdown: md });
+    const breadcrumbs = breadcrumbJsonLd([{ name: 'Home', path: '/' }, { name: 'About', path: '/about' }]);
+    writeRoute('/about', { title, description, ogType: 'profile', extraHead: breadcrumbs, bodyHtml: body, markdown: md });
 }
 
 function servicesPage() {
@@ -300,7 +342,8 @@ function servicesPage() {
 ${EXPERTISE_AREAS.map(a => `## ${a.title}\n\n${a.description}`).join('\n\n')}
 `;
 
-    writeRoute('/services', { title, description, bodyHtml: body, markdown: md });
+    const breadcrumbs = breadcrumbJsonLd([{ name: 'Home', path: '/' }, { name: 'Services', path: '/services' }]);
+    writeRoute('/services', { title, description, extraHead: breadcrumbs, bodyHtml: body, markdown: md });
 }
 
 function projectsPage() {
@@ -343,7 +386,8 @@ Personal AI systems built independently — proof of hands-on fluency with the s
 ${AI_LAB_ITEMS.map(p => `### ${p.title}\n\n*${p.category}${p.built ? ` · ${p.built}` : ''}*\n\n${p.description}\n\nStack: ${p.tags.join(', ')}`).join('\n\n')}
 `;
 
-    writeRoute('/projects', { title, description, bodyHtml: body, markdown: md });
+    const breadcrumbs = breadcrumbJsonLd([{ name: 'Home', path: '/' }, { name: 'Projects', path: '/projects' }]);
+    writeRoute('/projects', { title, description, extraHead: breadcrumbs, bodyHtml: body, markdown: md });
 }
 
 function blogIndexPage() {
@@ -369,7 +413,8 @@ function blogIndexPage() {
 ${sorted.map(post => `## [${post.title}](${SITE_URL}/blog/${post.slug})\n\n*${post.date} · ${post.tags.join(', ')}*\n\n${post.excerpt}`).join('\n\n')}
 `;
 
-    writeRoute('/blog', { title, description, bodyHtml: body, markdown: md });
+    const breadcrumbs = breadcrumbJsonLd([{ name: 'Home', path: '/' }, { name: 'Blog', path: '/blog' }]);
+    writeRoute('/blog', { title, description, extraHead: breadcrumbs, bodyHtml: body, markdown: md });
 }
 
 function blogPostPage(post) {
@@ -389,7 +434,7 @@ function blogPostPage(post) {
         mainEntityOfPage: `${SITE_URL}/blog/${post.slug}`
     }, null, 2)}
     </script>
-`;
+` + breadcrumbJsonLd([{ name: 'Home', path: '/' }, { name: 'Blog', path: '/blog' }, { name: post.title, path: `/blog/${post.slug}` }]);
 
     const body = `
         <article>
@@ -436,7 +481,8 @@ Based in ${CONTACT_INFO.location}. Available for ${CONTACT_INFO.availableFor.joi
 I personally read and respond to every message sent to the email above.
 `;
 
-    writeRoute('/contact', { title, description, bodyHtml: body, markdown: md });
+    const breadcrumbs = breadcrumbJsonLd([{ name: 'Home', path: '/' }, { name: 'Contact', path: '/contact' }]);
+    writeRoute('/contact', { title, description, extraHead: breadcrumbs, bodyHtml: body, markdown: md });
 }
 
 function privacyPage() {
@@ -467,7 +513,8 @@ Last updated: ${BUILD_DATE}
 ${sections.map(([heading, text]) => `## ${heading}\n\n${text}`).join('\n\n')}
 `;
 
-    writeRoute('/privacy', { title, description, bodyHtml: body, markdown: md });
+    const breadcrumbs = breadcrumbJsonLd([{ name: 'Home', path: '/' }, { name: 'Privacy Policy', path: '/privacy' }]);
+    writeRoute('/privacy', { title, description, extraHead: breadcrumbs, bodyHtml: body, markdown: md });
 }
 
 function slugifyHeading(str) {
