@@ -166,7 +166,7 @@ function breadcrumbJsonLd(items) {
 
 const generatedMarkdown = [];
 
-function writeRoute(routePath, { title, description, ogType, extraHead, bodyHtml, markdown }) {
+function writeRoute(routePath, { title, description, ogType, extraHead, bodyHtml, markdown, lastmod = BUILD_DATE }) {
     const html = injectBody(
         injectHead(shellTemplate, { title, description, canonicalPath: routePath, ogType, extraHead }),
         wrapPage(routePath, bodyHtml)
@@ -182,7 +182,7 @@ function writeRoute(routePath, { title, description, ogType, extraHead, bodyHtml
     const mdOutPath = path.join(DIST, mdPathFor(routePath).slice(1));
     fs.mkdirSync(path.dirname(mdOutPath), { recursive: true });
     fs.writeFileSync(mdOutPath, markdown);
-    generatedMarkdown.push({ path: routePath, title, markdown });
+    generatedMarkdown.push({ path: routePath, title, markdown, lastmod });
 
     console.log(`  ✓ ${routePath} -> ${path.relative(DIST, outPath)} + ${path.relative(DIST, mdOutPath)}`);
 }
@@ -453,7 +453,7 @@ ${post.content.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean).join('\n\n')}
 [← Back to all posts](${SITE_URL}/blog)
 `;
 
-    writeRoute(`/blog/${post.slug}`, { title, description, ogType: 'article', extraHead: articleJsonLd, bodyHtml: body, markdown: md });
+    writeRoute(`/blog/${post.slug}`, { title, description, ogType: 'article', extraHead: articleJsonLd, bodyHtml: body, markdown: md, lastmod: isoDate.slice(0, 10) });
 }
 
 function contactPage() {
@@ -599,6 +599,29 @@ For the full text of every page in one file: ${SITE_URL}/llms-full.txt
     console.log('  ✓ /llms.txt (regenerated from data) + /llms-full.txt');
 }
 
+// --- sitemap.xml -------------------------------------------------------------
+
+function sitemapXml() {
+    const PRIORITY = { '/': '1.0', '/blog': '0.8' };
+
+    const urls = generatedMarkdown.map(route => {
+        const priority = PRIORITY[route.path] || (route.path.startsWith('/blog/') ? '0.6' : '0.5');
+        return `  <url>
+    <loc>${SITE_URL}${route.path}</loc>
+    <lastmod>${route.lastmod}</lastmod>
+    <priority>${priority}</priority>
+  </url>`;
+    }).join('\n');
+
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls}
+</urlset>
+`;
+    fs.writeFileSync(path.join(DIST, 'sitemap.xml'), xml);
+    console.log(`  ✓ /sitemap.xml (${generatedMarkdown.length} real routes, no hash URLs)`);
+}
+
 // --- Run ------------------------------------------------------------------------
 
 console.log('Prerendering static routes...');
@@ -612,4 +635,5 @@ contactPage();
 privacyPage();
 notFoundPage();
 llmsFiles();
-console.log(`Done. ${generatedMarkdown.length} routes generated (HTML + Markdown), plus 404 and llms.txt/llms-full.txt.`);
+sitemapXml();
+console.log(`Done. ${generatedMarkdown.length} routes generated (HTML + Markdown), plus 404, llms.txt/llms-full.txt, and sitemap.xml.`);
