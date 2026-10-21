@@ -37,8 +37,19 @@ export default async function middleware(request) {
         return next();
     }
 
+    // Forward the inbound request's cookies and any Vercel protection-bypass
+    // header so this same-origin self-fetch doesn't get challenged by
+    // Deployment Protection on a protected (e.g. preview) deployment - it
+    // otherwise has no auth context of its own and would silently return the
+    // SSO interstitial page instead of the real file.
+    const internalHeaders = {};
+    const cookie = request.headers.get('cookie');
+    const bypass = request.headers.get('x-vercel-protection-bypass');
+    if (cookie) internalHeaders.cookie = cookie;
+    if (bypass) internalHeaders['x-vercel-protection-bypass'] = bypass;
+
     const mdUrl = new URL(mdPathFor(url.pathname), url.origin);
-    const mdResponse = await fetch(mdUrl);
+    const mdResponse = await fetch(mdUrl, { headers: internalHeaders });
 
     if (mdResponse.ok) {
         const body = await mdResponse.text();
@@ -52,7 +63,7 @@ export default async function middleware(request) {
     }
 
     const notFoundUrl = new URL('/404.md', url.origin);
-    const notFoundResponse = await fetch(notFoundUrl);
+    const notFoundResponse = await fetch(notFoundUrl, { headers: internalHeaders });
     const notFoundBody = notFoundResponse.ok ? await notFoundResponse.text() : '# Not Found\n';
 
     return new Response(notFoundBody, {
