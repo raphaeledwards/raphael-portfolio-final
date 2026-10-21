@@ -1,9 +1,10 @@
-// Generates static, crawlable HTML for every route from the data in
+// Generates static, crawlable HTML + Markdown for every route from the data in
 // src/data/portfolioData.js (the single source of truth — nothing here is
 // hand-duplicated content). Runs as a postbuild step, after `vite build` has
 // already produced dist/index.html with the real hashed asset tags; this
 // script takes that file as a template and clones it per route with
-// route-specific content and metadata injected in.
+// route-specific content and metadata injected in, plus a parallel Markdown
+// twin of each page for agents that request `Accept: text/markdown`.
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -40,6 +41,8 @@ const paragraphs = (text = '') => text
     .filter(Boolean)
     .map(p => `<p>${esc(p)}</p>`)
     .join('\n');
+
+const mdPathFor = (routePath) => routePath === '/' ? '/index.md' : `${routePath}.md`;
 
 const NAV_ITEMS = [
     { href: '/', label: 'Home' },
@@ -80,6 +83,7 @@ ${mainHtml}
 
 function injectHead(html, { title, description, canonicalPath, ogType = 'website', extraHead = '' }) {
     const canonicalUrl = `${SITE_URL}${canonicalPath}`;
+    const mdUrl = `${SITE_URL}${mdPathFor(canonicalPath)}`;
     let out = html;
 
     out = out.replace(/<title>[\s\S]*?<\/title>/, `<title>${esc(title)}</title>`);
@@ -108,7 +112,9 @@ function injectHead(html, { title, description, canonicalPath, ogType = 'website
         `<meta property="og:image" content="${esc(DEFAULT_IMAGE)}" />`
     );
 
-    const headInject = `    <link rel="canonical" href="${canonicalUrl}" />\n${extraHead}  </head>`;
+    const headInject = `    <link rel="canonical" href="${canonicalUrl}" />
+    <link rel="alternate" type="text/markdown" href="${mdUrl}" />
+${extraHead}  </head>`;
     out = out.replace(/\s*<\/head>/, `\n${headInject}`);
 
     return out;
@@ -118,7 +124,9 @@ function injectBody(html, bodyHtml) {
     return html.replace('<div id="root"></div>', `<div id="root">${bodyHtml}</div>`);
 }
 
-function writeRoute(routePath, { title, description, ogType, extraHead, bodyHtml }) {
+const generatedMarkdown = [];
+
+function writeRoute(routePath, { title, description, ogType, extraHead, bodyHtml, markdown }) {
     const html = injectBody(
         injectHead(shellTemplate, { title, description, canonicalPath: routePath, ogType, extraHead }),
         wrapPage(routePath, bodyHtml)
@@ -130,7 +138,13 @@ function writeRoute(routePath, { title, description, ogType, extraHead, bodyHtml
 
     fs.mkdirSync(path.dirname(outPath), { recursive: true });
     fs.writeFileSync(outPath, html);
-    console.log(`  ✓ ${routePath} -> ${path.relative(DIST, outPath)}`);
+
+    const mdOutPath = path.join(DIST, mdPathFor(routePath).slice(1));
+    fs.mkdirSync(path.dirname(mdOutPath), { recursive: true });
+    fs.writeFileSync(mdOutPath, markdown);
+    generatedMarkdown.push({ path: routePath, title, markdown });
+
+    console.log(`  ✓ ${routePath} -> ${path.relative(DIST, outPath)} + ${path.relative(DIST, mdOutPath)}`);
 }
 
 // --- Route content builders ---------------------------------------------------
@@ -173,7 +187,32 @@ function homePage() {
             </ul>
         </section>`;
 
-    writeRoute('/', { title, description, ogType: 'website', bodyHtml: body });
+    const md = `# Raphael J. Edwards — Technology Executive & AI Practitioner
+
+${ABOUT_ME.bio}
+
+## Who This Is For
+
+Organizations and teams navigating cloud migration, Zero Trust security transformation, and the shift to AI-augmented engineering — and anyone evaluating whether a technology executive actually builds, not just manages.
+
+## Expertise
+
+${EXPERTISE_AREAS.map(a => `- **${a.title}** — ${a.description}`).join('\n')}
+
+## Key Achievements
+
+${KEY_ACHIEVEMENTS.slice(0, 5).map(a => `- ${a}`).join('\n')}
+
+## Explore
+
+- [About](${SITE_URL}/about) — bio, leadership philosophy, education, credentials
+- [Services & Expertise](${SITE_URL}/services)
+- [Featured Projects & AI Lab](${SITE_URL}/projects)
+- [Blog](${SITE_URL}/blog) — insights on leadership, security, and AI systems
+- [Contact](${SITE_URL}/contact)
+`;
+
+    writeRoute('/', { title, description, ogType: 'website', bodyHtml: body, markdown: md });
 }
 
 function aboutPage() {
@@ -216,7 +255,34 @@ function aboutPage() {
             </ul>
         </section>`;
 
-    writeRoute('/about', { title, description, ogType: 'profile', bodyHtml: body });
+    const md = `# About Raphael J. Edwards
+
+${ABOUT_ME.role} · ${ABOUT_ME.location}
+
+${ABOUT_ME.bio}
+
+## Leadership Philosophy
+
+${ABOUT_ME.leadershipPhilosophy}
+
+## Technical Background
+
+${ABOUT_ME.technicalBackground}
+
+## Education
+
+${EDUCATION.map(e => `- ${e.institution} — ${e.credential} (${e.period})`).join('\n')}
+
+## Certifications
+
+${CERTIFICATIONS.map(c => `- ${c.name} (${c.period})`).join('\n')}
+
+## Recognition
+
+${RECOGNITION.map(r => `- ${r.name}, ${r.year}${r.note ? ` — ${r.note}` : ''}`).join('\n')}
+`;
+
+    writeRoute('/about', { title, description, ogType: 'profile', bodyHtml: body, markdown: md });
 }
 
 function servicesPage() {
@@ -230,7 +296,12 @@ function servicesPage() {
             <p>${esc(area.description)}</p>
         </article>`).join('\n        ')}`;
 
-    writeRoute('/services', { title, description, bodyHtml: body });
+    const md = `# Services & Expertise
+
+${EXPERTISE_AREAS.map(a => `## ${a.title}\n\n${a.description}`).join('\n\n')}
+`;
+
+    writeRoute('/services', { title, description, bodyHtml: body, markdown: md });
 }
 
 function projectsPage() {
@@ -260,7 +331,20 @@ function projectsPage() {
             </article>`).join('\n            ')}
         </section>`;
 
-    writeRoute('/projects', { title, description, bodyHtml: body });
+    const md = `# Featured Projects
+
+## Career Impact
+
+${PROJECT_ITEMS.map(p => `### ${p.title}\n\n*${p.category}*\n\n${p.description}`).join('\n\n')}
+
+## AI Lab — Personal Builds
+
+Personal AI systems built independently — proof of hands-on fluency with the stack, not just leadership over it.
+
+${AI_LAB_ITEMS.map(p => `### ${p.title}\n\n*${p.category}${p.built ? ` · ${p.built}` : ''}*\n\n${p.description}\n\nStack: ${p.tags.join(', ')}`).join('\n\n')}
+`;
+
+    writeRoute('/projects', { title, description, bodyHtml: body, markdown: md });
 }
 
 function blogIndexPage() {
@@ -281,7 +365,12 @@ function blogIndexPage() {
             </li>`).join('\n            ')}
         </ul>`;
 
-    writeRoute('/blog', { title, description, bodyHtml: body });
+    const md = `# Insights & Blog
+
+${sorted.map(post => `## [${post.title}](${SITE_URL}/blog/${post.slug})\n\n*${post.date} · ${post.tags.join(', ')}*\n\n${post.excerpt}`).join('\n\n')}
+`;
+
+    writeRoute('/blog', { title, description, bodyHtml: body, markdown: md });
 }
 
 function blogPostPage(post) {
@@ -311,7 +400,16 @@ function blogPostPage(post) {
         </article>
         <p><a href="/blog">&larr; Back to all posts</a></p>`;
 
-    writeRoute(`/blog/${post.slug}`, { title, description, ogType: 'article', extraHead: articleJsonLd, bodyHtml: body });
+    const md = `# ${post.title}
+
+*${post.date} · ${post.tags.join(', ')}*
+
+${post.content.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean).join('\n\n')}
+
+[← Back to all posts](${SITE_URL}/blog)
+`;
+
+    writeRoute(`/blog/${post.slug}`, { title, description, ogType: 'article', extraHead: articleJsonLd, bodyHtml: body, markdown: md });
 }
 
 function contactPage() {
@@ -328,48 +426,131 @@ function contactPage() {
         </ul>
         <p>I personally read and respond to every message sent to the email above.</p>`;
 
-    writeRoute('/contact', { title, description, bodyHtml: body });
+    const md = `# Contact
+
+Based in ${CONTACT_INFO.location}. Available for ${CONTACT_INFO.availableFor.join(', ')}.
+
+- Email: [${CONTACT_INFO.email}](mailto:${CONTACT_INFO.email})
+- LinkedIn: [${CONTACT_INFO.linkedin}](${CONTACT_INFO.linkedin})
+- GitHub: [${CONTACT_INFO.github}](${CONTACT_INFO.github})
+
+I personally read and respond to every message sent to the email above.
+`;
+
+    writeRoute('/contact', { title, description, bodyHtml: body, markdown: md });
 }
 
 function privacyPage() {
     const title = 'Privacy Policy | Raphael J. Edwards';
     const description = 'How raphaeljedwards.com handles analytics, the AI chat feature, reactions, and visitor data.';
 
+    const sections = [
+        ['Analytics', "This site uses Firebase Analytics (built on Google Analytics) to understand aggregate traffic patterns such as page views and session counts. No custom event tracking is implemented beyond Firebase's automatic page-view collection."],
+        ['Reaction Buttons', "Clicking a reaction button increments a public counter stored in our database against that project or blog post. This is anonymous — it is not tied to your identity or account. Your browser's session storage remembers that you reacted, purely to prevent double-counting in the same session; nothing is sent to our servers beyond the increment itself."],
+        ['AI Chat', "The AI Chat feature requires signing in with Google. Messages you send are processed server-side and forwarded to Google's Gemini API to generate a response. Each conversation turn (your message, the AI's response, a timestamp, and your user ID) is logged to our database for quality review and is visible only to the site administrator. Chat history is also kept in your browser's local storage so your conversation persists between visits; clearing it is available from the chat panel."],
+        ['Authentication', 'Google Sign-In (via Firebase Authentication) is used only to gate access to the AI Chat feature and the admin panel. It is not used for marketing or advertising purposes.'],
+        ['Data Sharing', 'We do not sell visitor data to third parties. Data is shared only with the service providers required to run the site: Google Firebase (hosting, authentication, database, and analytics) and Google Gemini (processing AI chat messages).'],
+        ['Privacy Requests', `For questions about this policy or to request deletion of your data, email [${CONTACT_INFO.email}](mailto:${CONTACT_INFO.email}).`]
+    ];
+
     const body = `
         <h1>Privacy Policy</h1>
         <p>Last updated: ${BUILD_DATE}</p>
+        ${sections.map(([heading, text]) => `<section aria-labelledby="${slugifyHeading(heading)}">
+            <h2 id="${slugifyHeading(heading)}">${esc(heading)}</h2>
+            <p>${heading === 'Privacy Requests' ? `For questions about this policy or to request deletion of your data, email <a href="mailto:${esc(CONTACT_INFO.email)}">${esc(CONTACT_INFO.email)}</a>.` : esc(text)}</p>
+        </section>`).join('\n        ')}`;
 
-        <section aria-labelledby="analytics">
-            <h2 id="analytics">Analytics</h2>
-            <p>This site uses Firebase Analytics (built on Google Analytics) to understand aggregate traffic patterns such as page views and session counts. No custom event tracking is implemented beyond Firebase's automatic page-view collection.</p>
-        </section>
+    const md = `# Privacy Policy
 
-        <section aria-labelledby="reactions">
-            <h2 id="reactions">Reaction Buttons</h2>
-            <p>Clicking a reaction button increments a public counter stored in our database against that project or blog post. This is anonymous — it is not tied to your identity or account. Your browser's session storage remembers that you reacted, purely to prevent double-counting in the same session; nothing is sent to our servers beyond the increment itself.</p>
-        </section>
+Last updated: ${BUILD_DATE}
 
-        <section aria-labelledby="ai-chat">
-            <h2 id="ai-chat">AI Chat</h2>
-            <p>The AI Chat feature requires signing in with Google. Messages you send are processed server-side and forwarded to Google's Gemini API to generate a response. Each conversation turn (your message, the AI's response, a timestamp, and your user ID) is logged to our database for quality review and is visible only to the site administrator. Chat history is also kept in your browser's local storage so your conversation persists between visits; clearing it is available from the chat panel.</p>
-        </section>
+${sections.map(([heading, text]) => `## ${heading}\n\n${text}`).join('\n\n')}
+`;
 
-        <section aria-labelledby="auth">
-            <h2 id="auth">Authentication</h2>
-            <p>Google Sign-In (via Firebase Authentication) is used only to gate access to the AI Chat feature and the admin panel. It is not used for marketing or advertising purposes.</p>
-        </section>
+    writeRoute('/privacy', { title, description, bodyHtml: body, markdown: md });
+}
 
-        <section aria-labelledby="sharing">
-            <h2 id="sharing">Data Sharing</h2>
-            <p>We do not sell visitor data to third parties. Data is shared only with the service providers required to run the site: Google Firebase (hosting authentication, database, and analytics) and Google Gemini (processing AI chat messages).</p>
-        </section>
+function slugifyHeading(str) {
+    return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}
 
-        <section aria-labelledby="requests">
-            <h2 id="requests">Privacy Requests</h2>
-            <p>For questions about this policy or to request deletion of your data, email <a href="mailto:${esc(CONTACT_INFO.email)}">${esc(CONTACT_INFO.email)}</a>.</p>
-        </section>`;
+// --- 404 ------------------------------------------------------------------------
 
-    writeRoute('/privacy', { title, description, bodyHtml: body });
+function notFoundPage() {
+    const body = `
+        <h1>Page Not Found</h1>
+        <p>There's nothing at this address. Try the homepage, the <a href="/sitemap.xml">sitemap</a>, or <a href="/llms.txt">llms.txt</a> for a full list of pages.</p>
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/sitemap.xml">Sitemap</a></li>
+            <li><a href="/llms.txt">llms.txt</a></li>
+        </ul>`;
+
+    const html = injectBody(
+        injectHead(shellTemplate, {
+            title: '404 Not Found | Raphael J. Edwards',
+            description: "The page you're looking for doesn't exist.",
+            canonicalPath: '/404',
+            ogType: 'website'
+        }),
+        wrapPage(null, body)
+    );
+    fs.writeFileSync(path.join(DIST, '404.html'), html);
+
+    const md = `# Page Not Found
+
+There's nothing at this address. Try the [homepage](${SITE_URL}/), the [sitemap](${SITE_URL}/sitemap.xml), or [llms.txt](${SITE_URL}/llms.txt) for a full list of pages.
+`;
+    fs.writeFileSync(path.join(DIST, '404.md'), md);
+    console.log('  ✓ /404 -> 404.html + 404.md');
+}
+
+// --- llms.txt / llms-full.txt ----------------------------------------------------
+
+function llmsFiles() {
+    const fullText = generatedMarkdown
+        .map(page => `<!-- Source: ${SITE_URL}${page.path} -->\n\n${page.markdown.trim()}`)
+        .join('\n\n---\n\n');
+    fs.writeFileSync(path.join(DIST, 'llms-full.txt'), fullText + '\n');
+
+    const sorted = [...BLOG_POSTS].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    const llmsTxt = `# Raphael J. Edwards
+
+> ${ABOUT_ME.role} based in ${ABOUT_ME.location}. Motto: "Building resilient teams. Solving complex problems." Contact: ${CONTACT_INFO.email}
+
+${ABOUT_ME.bio}
+
+${ABOUT_ME.leadershipPhilosophy}
+
+## Pages
+
+- [Home](${SITE_URL}/) ([markdown](${SITE_URL}/index.md))
+- [About](${SITE_URL}/about) ([markdown](${SITE_URL}/about.md)) — bio, leadership philosophy, education, certifications, recognition
+- [Services & Expertise](${SITE_URL}/services) ([markdown](${SITE_URL}/services.md))
+- [Featured Projects & AI Lab](${SITE_URL}/projects) ([markdown](${SITE_URL}/projects.md))
+- [Blog](${SITE_URL}/blog) ([markdown](${SITE_URL}/blog.md))
+- [Contact](${SITE_URL}/contact) ([markdown](${SITE_URL}/contact.md))
+- [Privacy Policy](${SITE_URL}/privacy) ([markdown](${SITE_URL}/privacy.md))
+
+## Blog Posts
+
+${sorted.map(p => `- [${p.title}](${SITE_URL}/blog/${p.slug}) (${p.date}) ([markdown](${SITE_URL}/blog/${p.slug}.md)) — ${p.excerpt}`).join('\n')}
+
+## Everything, concatenated
+
+For the full text of every page in one file: ${SITE_URL}/llms-full.txt
+
+## Contact
+
+- Email: ${CONTACT_INFO.email}
+- LinkedIn: ${CONTACT_INFO.linkedin}
+- GitHub: ${CONTACT_INFO.github}
+- Location: ${CONTACT_INFO.location}
+`;
+    fs.writeFileSync(path.join(DIST, 'llms.txt'), llmsTxt);
+    console.log('  ✓ /llms.txt (regenerated from data) + /llms-full.txt');
 }
 
 // --- Run ------------------------------------------------------------------------
@@ -383,4 +564,6 @@ blogIndexPage();
 BLOG_POSTS.forEach(blogPostPage);
 contactPage();
 privacyPage();
-console.log(`Done. ${5 + BLOG_POSTS.length + 2} routes generated.`);
+notFoundPage();
+llmsFiles();
+console.log(`Done. ${generatedMarkdown.length} routes generated (HTML + Markdown), plus 404 and llms.txt/llms-full.txt.`);
