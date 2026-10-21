@@ -8,7 +8,7 @@
 
 ## Status (updated 2026-10-21)
 
-Phases 0-3 are merged to `main` and verified live on production. Phase 4 is next.
+**All 4 phases are merged to `main` and verified live on raphaeljedwards.com.** The plan as scoped is complete. What's left is entirely manual steps only Raphael can do — see below.
 
 | Phase | Status | PR |
 |---|---|---|
@@ -18,20 +18,63 @@ Phases 0-3 are merged to `main` and verified live on production. Phase 4 is next
 | 2 — Markdown + real 404s + middleware | ✅ Done | [#4](https://github.com/raphaeledwards/raphael-portfolio-final/pull/4) |
 | *(unplanned)* Full code review of Phases 0-2, 8 findings fixed | ✅ Done | [#5](https://github.com/raphaeledwards/raphael-portfolio-final/pull/5) |
 | 3 — Trust pages + metadata | ✅ Done | [#6](https://github.com/raphaeledwards/raphael-portfolio-final/pull/6) |
-| 4 — Sitemap + cleanup | ⏳ Next | — |
+| 4 — Sitemap + cleanup | ✅ Done | [#7](https://github.com/raphaeledwards/raphael-portfolio-final/pull/7) |
 
 **Deviations from the plan as originally written** (why, inline in the phase sections below too):
 - Phase 1 pulls structured data (education, certifications, recognition, achievements, contact) from new exports added to `portfolioData.js`, not by parsing `resumeContext.js`'s AI-prompt prose as the plan assumed — that file is a template string, not structured data, and parsing it felt riskier than adding a few new arrays. `resumeContext.js` itself was left untouched to avoid any risk to chat behavior.
 - Phase 2's `vercel.json` fix ended up being "delete the catch-all rewrite entirely" rather than "rewrite only the SPA-only routes" — there turned out to be zero routes needing an SPA fallback (the admin panel is in-page state, not a URL).
 - Phase 2's middleware API is `middleware.js` + `next()`/`Response` from the `@vercel/functions` package (current Vercel docs, checked 2026-10-21) — the familiar Next.js-style `export function middleware(request)` zero-dependency convention doesn't apply outside Next.js.
-- Phase 3's og-image is generated at build time via `sharp` (new devDependency) compositing the real headshot with a branded card, not a hand-made static file.
+- Phase 3's og-image is generated at build time via `sharp` (new devDependency) compositing the real headshot with a branded card, not a hand-made static file. Live at [raphaeljedwards.com/og-image.png](https://raphaeljedwards.com/og-image.png).
+- Phase 4's sitemap drops `changefreq` (Google has said for years it ignores this; `priority` was kept since it's still harmless/low-cost to include).
 
-**Outstanding TODOs for Raphael** (flagged in PR descriptions as they came up; consolidated here):
-- `firestore.rules` still has the literal placeholder `'YOUR_ADMIN_UID_HERE'` — unknown whether the deployed Firebase Console rules already have the real UID.
-- Contact email inconsistency, pre-existing: the live Contact section / `portfolioData.js`'s `CONTACT_INFO.email` use `raphael@raphaeljedwards.com`; the Person JSON-LD and AI persona's contact line use `raphaeledwards@gmail.com`. Pick one.
-- Vercel env vars: add `GEMINI_API_KEY` (server-only), remove `VITE_GEMINI_API_KEY`, fix `VITE_FIREBASE_API_KEY` for both Production and Preview — confirmed missing from the built bundle on both as of 2026-10-20. **Explicitly deferred by Raphael** — auth/chat aren't needed right now, so Firebase Auth/Firestore/chat still won't fully work until this is done, but it's not blocking the rest of the plan.
-- `www` → apex redirect in Vercel → Domains (Phase 3 item 6) — still manual, not done.
-- Optional: `git filter-repo` to purge the old dead `.env` blob from git history.
+---
+
+## Remaining manual steps (only Raphael can do these)
+
+Nothing here blocks the site working as deployed today — it's live, static content is correct, and the hotfix (PR #2) keeps the page from crashing even with Firebase unconfigured. These close the remaining gaps.
+
+### 1. Fix the Vercel environment variables — *explicitly deferred by Raphael this session; revisit when auth/chat are actually needed*
+
+Firebase Auth, Firestore, and the AI chat are all non-functional right now because `VITE_FIREBASE_API_KEY` doesn't resolve at build time. Confirmed missing from the built JS bundle on **both** Production and Preview as of 2026-10-20.
+
+- Vercel → Project Settings → Environment Variables:
+  - Add `GEMINI_API_KEY` (no `VITE_` prefix — this one must stay server-only, read only by `api/chat.js`/`api/embed.js`) for both **Production** and **Preview**.
+  - Delete `VITE_GEMINI_API_KEY` — nothing reads it anymore after Phase 0 (PR #1).
+  - Check `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_MEASUREMENT_ID` are all set for **both** Production and Preview scopes (not just one). Compare against the values in your local `.env`.
+- After fixing, trigger a new deployment (push any commit, or redeploy from the Vercel dashboard) and confirm: open the site, click "Sign In", and check that `firebase.js` no longer logs "Missing Firebase API Key" in the browser console.
+
+### 2. Confirm the Gemini API key is restricted
+
+Google Cloud Console → APIs & Services → Credentials → the key used for `GEMINI_API_KEY` → confirm it's restricted to the Generative Language API only. This limits the blast radius if the key ever leaks again.
+
+### 3. Confirm/fix the Firestore admin UID
+
+`firestore.rules` in this repo still has the literal placeholder `'YOUR_ADMIN_UID_HERE'` for every admin-only write (seed database, clear chat logs, etc.):
+
+```
+match /{document=**} {
+  allow write: if request.auth.uid == 'YOUR_ADMIN_UID_HERE';
+}
+```
+
+- Firebase Console → Firestore Database → Rules: check whether the **deployed** rules already have your real UID substituted in (they may have been edited directly in the console, separately from this repo).
+- If not: sign in to the site once, open the Admin Panel, copy your UID from there (displayed under "Authenticated User"), and replace the placeholder in both the Firebase Console rules editor and this repo's `firestore.rules`, then redeploy the rules (`firebase deploy --only firestore:rules` if you use the CLI, or paste directly into the console).
+
+### 4. Pick one canonical contact email
+
+Pre-existing inconsistency, not introduced by this work:
+- Live Contact section (`src/App.jsx`) and `portfolioData.js`'s `CONTACT_INFO.email` → `raphael@raphaeljedwards.com`
+- Person JSON-LD (`index.html`) and the AI persona's contact line (`resumeContext.js`, via the `VITE_ADMIN_EMAILS` env var) → `raphaeledwards@gmail.com`
+
+Decide which is the real one, then either update `CONTACT_INFO.email` in `portfolioData.js` + the JSON-LD in `index.html` to match, or update `VITE_ADMIN_EMAILS` in Vercel + the JSON-LD to match the other.
+
+### 5. Set the `www` → apex redirect
+
+Vercel → Project Settings → Domains. Right now `raphaeljedwards.com` (apex) redirects *to* `www.raphaeljedwards.com` — backwards from what this plan assumes. All canonicals, `sitemap.xml`, `llms.txt`, and JSON-LD use the apex domain (`https://raphaeljedwards.com`) as canonical, matching the plan's original diagnosis. Set `www` to redirect to apex (308) instead, or decide you actually want `www` as canonical and say so — if the latter, every generated URL across the site would need updating to match.
+
+### 6. Optional: purge the dead `.env` blob from git history
+
+Low priority — the Gemini key that was committed in `.env` was already rotated/dead before Phase 0. Pure hygiene: `git filter-repo --path .env --invert-paths` (or BFG Repo-Cleaner), then force-push and have anyone else with a local clone re-clone. Only worth doing if the exposure itself (not the dead key) bothers you.
 
 ---
 
