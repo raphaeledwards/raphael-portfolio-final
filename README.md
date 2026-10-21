@@ -12,13 +12,15 @@ A cutting-edge portfolio application built with **React**, **Vite**, and **Tailw
 -   **⚡ High Performance**: Lazy loading, optimized code splitting, and fast initial paint.
 -   **🛠️ Developer Mode**: "Index Source Code" feature allows the AI to answer technical questions about the codebase itself.
 -   **📱 Fully Responsive**: Premium mobile-first design with smooth animations.
+-   **🕸️ Agent/Crawler Readable**: Every route has real static HTML and a Markdown twin generated at build time (no JS required to read content), real 404s, a build-time `sitemap.xml`/`llms.txt`, and content negotiation via `Accept: text/markdown`. See `AGENT_READINESS_PLAN.md` for the full rationale.
 
 ## 🛠️ Tech Stack
 
 -   **Frontend**: React (Vite), Tailwind CSS, Lucide React (Icons).
--   **Backend / Serverless**: Firebase (Auth, Firestore).
+-   **Backend / Serverless**: Firebase (Auth, Firestore), Vercel Serverless Functions (`api/chat.js`, `api/embed.js` — Gemini calls run server-side, never in the client bundle).
 -   **AI**: Google Gemini API (Embeddings & Completion).
--   **Deployment**: Vercel (SPA configured).
+-   **Static generation**: `scripts/prerender.js` (postbuild step) generates per-route static HTML + Markdown, a real sitemap, and `llms.txt` from `portfolioData.js`; `middleware.js` handles `Accept`-header content negotiation.
+-   **Deployment**: Vercel (SPA + static routes).
 
 ## ⚙️ Setup & Installation
 
@@ -44,10 +46,12 @@ A cutting-edge portfolio application built with **React**, **Vite**, and **Tailw
     VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
     VITE_FIREBASE_APP_ID=your_app_id
 
-    # AI Configuration
-    VITE_GEMINI_API_KEY=your_gemini_api_key
+    # AI Configuration — server-only, no VITE_ prefix (Vite inlines VITE_* vars into
+    # the public bundle, so this one must stay out of client code; read only by api/*.js)
+    GEMINI_API_KEY=your_gemini_api_key
 
-    # Admin Access (Comma separated)
+    # Admin Access (Comma separated). UI-only gate — enforce real admin access with
+    # Firestore Security Rules (see firestore.rules), not this list.
     VITE_ADMIN_EMAILS=your_email@example.com,other@example.com
     ```
 
@@ -71,8 +75,9 @@ A cutting-edge portfolio application built with **React**, **Vite**, and **Tailw
 ## 📦 Deployment
 
 This project is configured for **Vercel**.
--   `vercel.json` handles the SPA rewrite rules.
--   Ensure you add all Environment Variables to your Vercel Project Settings.
+-   `npm run build` runs `prebuild` (source manifest) → `vite build` → `postbuild` (OG image + `scripts/prerender.js`, which writes static HTML/Markdown/sitemap/404 pages for every route into `dist/`).
+-   `middleware.js` serves the Markdown twin instead of HTML when a request's `Accept` header prefers `text/markdown`.
+-   Ensure you add all Environment Variables to your Vercel Project Settings — **for both Production and Preview scopes**. `VITE_`-prefixed vars should be set as **Config/Plaintext**, not Secret/Sensitive (Vite inlines them into the public bundle regardless, so marking them Sensitive just makes them write-only in the dashboard without adding real secrecy). `GEMINI_API_KEY` (no prefix) is the one that should stay Secret.
 
 ---
 &copy; 2025 Raphael J. Edwards

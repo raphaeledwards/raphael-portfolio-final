@@ -33,15 +33,16 @@
 
 Nothing here blocks the site working as deployed today — it's live, static content is correct, and the hotfix (PR #2) keeps the page from crashing even with Firebase unconfigured. These close the remaining gaps.
 
-### 1. Fix the Vercel environment variables — *explicitly deferred by Raphael this session; revisit when auth/chat are actually needed*
+### 1. ✅ Done (2026-10-21) — Fix the Vercel environment variables
 
-Firebase Auth, Firestore, and the AI chat are all non-functional right now because `VITE_FIREBASE_API_KEY` doesn't resolve at build time. Confirmed missing from the built JS bundle on **both** Production and Preview as of 2026-10-20.
+Root cause confirmed and fixed. It was never deleted service accounts/APIs (the `raphael-portfolio-auth` Firebase/GCP project, its OAuth client, and its enabled APIs were all intact) — all six `VITE_FIREBASE_*` vars plus `VITE_ADMIN_EMAILS` were simply absent from Vercel's Production/Preview environments, which made `firebase.js`'s init throw and `auth` resolve to `null`, and then made the Admin Console's email allowlist reject every login even once auth itself started working.
 
-- Vercel → Project Settings → Environment Variables:
-  - Add `GEMINI_API_KEY` (no `VITE_` prefix — this one must stay server-only, read only by `api/chat.js`/`api/embed.js`) for both **Production** and **Preview**.
-  - Delete `VITE_GEMINI_API_KEY` — nothing reads it anymore after Phase 0 (PR #1).
-  - Check `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_MEASUREMENT_ID` are all set for **both** Production and Preview scopes (not just one). Compare against the values in your local `.env`.
-- After fixing, trigger a new deployment (push any commit, or redeploy from the Vercel dashboard) and confirm: open the site, click "Sign In", and check that `firebase.js` no longer logs "Missing Firebase API Key" in the browser console.
+- Added all 7 vars (`VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID`, `VITE_ADMIN_EMAILS`) to Vercel as **Config** type, not Secret/Sensitive — Vite inlines `VITE_`-prefixed vars into the public bundle regardless, so Vercel itself warns against marking them Sensitive. Redeployed.
+- Also added `raphaeljedwards.com` (bare apex, no `www`) to Firebase Authentication → Authorized domains — it was missing (only `www.raphaeljedwards.com` was listed). Not the root cause, but a real gap, now closed.
+- **Confirmed working end-to-end:** Google sign-in, Admin Console unlock, Seed Database, and the AI Lab content rewrite (incl. the new Race Engineer entry) is live in Firestore.
+- **Still unconfirmed:** whether `GEMINI_API_KEY` (no `VITE_` prefix, server-only) is actually set in Vercel, and whether the dead `VITE_GEMINI_API_KEY` was deleted — these weren't touched during this fix. Verify before assuming AI chat works end-to-end.
+
+Full diagnostic trail: `FIREBASE_AUTH_RECOVERY.md` (repo root, local-only, not committed).
 
 ### 2. Confirm the Gemini API key is restricted
 
@@ -59,6 +60,7 @@ match /{document=**} {
 
 - Firebase Console → Firestore Database → Rules: check whether the **deployed** rules already have your real UID substituted in (they may have been edited directly in the console, separately from this repo).
 - If not: sign in to the site once, open the Admin Panel, copy your UID from there (displayed under "Authenticated User"), and replace the placeholder in both the Firebase Console rules editor and this repo's `firestore.rules`, then redeploy the rules (`firebase deploy --only firestore:rules` if you use the CLI, or paste directly into the console).
+- **Update (2026-10-21):** Seed Database now succeeds against prod, which means the *deployed* console rules already allow the write for Raphael's UID — the admin-write path is functionally fine. What's still open is just repo hygiene: this repo's checked-in `firestore.rules` may still show the literal placeholder while the console has the real UID, which is confusing for anyone reading the repo as source of truth. Worth syncing the real UID into the repo file at some point, but it's not blocking anything.
 
 ### 4. Pick one canonical contact email
 
