@@ -50,6 +50,10 @@ const AdminPanel = ({ isOpen, onClose, onRefreshData }) => {
     };
 
     const handleLogout = async () => {
+        if (!auth) {
+            onClose();
+            return;
+        }
         try {
             await signOut(auth);
             onClose(); // Close the panel after logout

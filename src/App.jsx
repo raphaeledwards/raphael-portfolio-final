@@ -34,7 +34,9 @@ const SECTION_IDS = ['about', 'services', 'projects', 'blog', 'contact'];
 
 // Mirrors the slug generation used for the static pages (scripts/prerender.js),
 // as a fallback for Firestore-sourced posts seeded before the `slug` field existed.
-const slugify = (str = '') => str.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+// Apostrophes are stripped (not dashed) so contractions match the hand-authored
+// slugs in portfolioData.js, e.g. "isn't" -> "isnt", not "isn-t".
+const slugify = (str = '') => str.toLowerCase().trim().replace(/['’]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
 
 const App = () => {
@@ -62,6 +64,12 @@ const App = () => {
   const [expertiseAreas, setExpertiseAreas] = useState(INITIAL_EXPERTISE);
   const [blogPosts, setBlogPosts] = useState(INITIAL_BLOGS);
   const [sourceCodes, setSourceCodes] = useState([]);
+
+  // applyLocation (below) is registered once as a long-lived popstate listener;
+  // it reads this ref instead of closing over `blogPosts` directly so it always
+  // sees the latest data instead of whatever was current at mount time.
+  const blogPostsRef = useRef(blogPosts);
+  useEffect(() => { blogPostsRef.current = blogPosts; }, [blogPosts]);
 
   const loadContent = async () => {
     // Determine source code fallback logic
@@ -119,7 +127,7 @@ const App = () => {
 
       if (path.startsWith('/blog/')) {
         const slug = path.slice('/blog/'.length);
-        const post = blogPosts.find(p => (p.slug || slugify(p.title)) === slug);
+        const post = blogPostsRef.current.find(p => (p.slug || slugify(p.title)) === slug);
         if (post) setSelectedItem({ ...post, type: 'blog' });
         document.getElementById('blog')?.scrollIntoView();
         return;
@@ -157,9 +165,9 @@ const App = () => {
 
   const scrollToSection = (id) => {
     setShowChat(false);
-    window.history.pushState(null, '', id === 'home' ? '/' : `/${id}`);
     const element = document.getElementById(id);
     if (element) {
+      window.history.pushState(null, '', id === 'home' ? '/' : `/${id}`);
       element.scrollIntoView({ behavior: 'smooth' });
       setIsMobileMenuOpen(false);
     }
