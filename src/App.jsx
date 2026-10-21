@@ -30,6 +30,12 @@ const ICON_MAP = {
   "BrainCircuit": BrainCircuit
 };
 
+const SECTION_IDS = ['about', 'services', 'projects', 'blog', 'contact'];
+
+// Mirrors the slug generation used for the static pages (scripts/prerender.js),
+// as a fallback for Firestore-sourced posts seeded before the `slug` field existed.
+const slugify = (str = '') => str.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
 
 const App = () => {
   const [activeCategory, setActiveCategory] = useState("All");
@@ -105,6 +111,29 @@ const App = () => {
       if (el) observer.observe(el);
     });
 
+    // Resolve the current URL (real path, with a legacy #hash fallback) to a
+    // section scroll and, for /blog/<slug>, the matching post modal. Runs on
+    // initial load and on browser back/forward.
+    const applyLocation = () => {
+      const path = window.location.pathname.replace(/\/+$/, '') || '/';
+
+      if (path.startsWith('/blog/')) {
+        const slug = path.slice('/blog/'.length);
+        const post = blogPosts.find(p => (p.slug || slugify(p.title)) === slug);
+        if (post) setSelectedItem({ ...post, type: 'blog' });
+        document.getElementById('blog')?.scrollIntoView();
+        return;
+      }
+
+      const id = path === '/' ? 'home' : path.slice(1);
+      const hashId = window.location.hash.replace('#', '');
+      const target = SECTION_IDS.includes(id) ? id : (SECTION_IDS.includes(hashId) ? hashId : null);
+      if (target) document.getElementById(target)?.scrollIntoView();
+    };
+
+    applyLocation();
+    window.addEventListener('popstate', applyLocation);
+
     // Auth Listener
     if (auth) {
       const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -113,12 +142,14 @@ const App = () => {
       });
       return () => {
         window.removeEventListener('scroll', handleScroll);
+        window.removeEventListener('popstate', applyLocation);
         unsubscribe();
         observer.disconnect();
       };
     } else {
       return () => {
         window.removeEventListener('scroll', handleScroll);
+        window.removeEventListener('popstate', applyLocation);
         observer.disconnect();
       }
     }
@@ -126,11 +157,27 @@ const App = () => {
 
   const scrollToSection = (id) => {
     setShowChat(false);
+    window.history.pushState(null, '', id === 'home' ? '/' : `/${id}`);
     const element = document.getElementById(id);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });
       setIsMobileMenuOpen(false);
     }
+  };
+
+  const handleViewBlogPost = (post) => {
+    const slug = post.slug || slugify(post.title);
+    if (window.location.pathname !== `/blog/${slug}`) {
+      window.history.pushState(null, '', `/blog/${slug}`);
+    }
+    handleViewItem(post);
+  };
+
+  const handleCloseModal = () => {
+    if (selectedItem?.type === 'blog' && window.location.pathname.startsWith('/blog/')) {
+      window.history.pushState(null, '', '/blog');
+    }
+    setSelectedItem(null);
   };
 
   const handleLogout = async () => {
@@ -486,7 +533,7 @@ const App = () => {
                 return (
                   <>
                     {paginated.map(post => (
-                      <div key={post.id} onClick={() => handleViewItem(post)} className="group block bg-neutral-950 p-8 rounded-xl border border-neutral-800 hover:border-rose-500/40 transition-all cursor-pointer">
+                      <div key={post.id} onClick={() => handleViewBlogPost(post)} className="group block bg-neutral-950 p-8 rounded-xl border border-neutral-800 hover:border-rose-500/40 transition-all cursor-pointer">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-3">
                           <h3 className="text-xl font-bold text-white group-hover:text-rose-500 transition-colors">{post.title}</h3>
                           <div className="flex items-center gap-4">
@@ -593,7 +640,7 @@ const App = () => {
         )}
 
         {/* Content Modal */}
-        <Modal isOpen={!!selectedItem} onClose={() => setSelectedItem(null)} title={selectedItem?.title || "Details"}>
+        <Modal isOpen={!!selectedItem} onClose={handleCloseModal} title={selectedItem?.title || "Details"}>
           {selectedItem && (
             <div>
               {selectedItem.image && (

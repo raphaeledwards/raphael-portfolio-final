@@ -19,6 +19,7 @@ export const EXPERTISE_AREAS = [
 export const BLOG_POSTS = [
     {
         id: 1,
+        slug: "the-human-element-in-digital-transformation",
         title: "The Human Element in Digital Transformation",
         date: "Oct 24, 2025",
         tags: ["Leadership", "Transformation", "Culture"],
@@ -31,6 +32,7 @@ export const BLOG_POSTS = [
     },
     {
         id: 2,
+        slug: "navigating-the-edge-security-implications",
         title: "Navigating the Edge: Security Implications",
         date: "Sep 15, 2025",
         tags: ["Security", "Edge Computing", "Zero Trust"],
@@ -43,6 +45,7 @@ export const BLOG_POSTS = [
     },
     {
         id: 3,
+        slug: "leadership-in-the-age-of-ai",
         title: "Leadership in the Age of AI",
         date: "Aug 02, 2025",
         tags: ["AI", "Leadership", "Management"],
@@ -55,6 +58,7 @@ export const BLOG_POSTS = [
     },
     {
         id: 4,
+        slug: "ai-agents-in-devops-the-end-of-pipelines",
         title: "AI Agents in DevOps: The End of Pipelines?",
         date: "Nov 05, 2025",
         tags: ["DevOps", "AI", "Automation"],
@@ -67,6 +71,7 @@ export const BLOG_POSTS = [
     },
     {
         id: 5,
+        slug: "zero-trust-isnt-product-its-culture",
         title: "Zero Trust isn't Product, It's Culture",
         date: "Nov 12, 2025",
         tags: ["Security", "Zero Trust", "Culture"],
@@ -79,6 +84,7 @@ export const BLOG_POSTS = [
     },
     {
         id: 6,
+        slug: "cloud-finops-your-aws-bill-is-bleeding",
         title: "Cloud FinOps: Your AWS Bill is Bleeding",
         date: "Nov 22, 2025",
         tags: ["Cloud", "FinOps", "Cost"],
@@ -91,6 +97,7 @@ export const BLOG_POSTS = [
     },
     {
         id: 7,
+        slug: "stop-measuring-lines-of-code",
         title: "Stop Measuring Lines of Code",
         date: "Dec 01, 2025",
         tags: ["Management", "Metrics", "Engineering"],
@@ -103,6 +110,7 @@ export const BLOG_POSTS = [
     },
     {
         id: 8,
+        slug: "technical-debt-as-a-feature",
         title: "Technical Debt as a Feature",
         date: "Dec 08, 2025",
         tags: ["Strategy", "Technical Debt", "Engineering"],
@@ -115,6 +123,7 @@ export const BLOG_POSTS = [
     },
     {
         id: 9,
+        slug: "building-a-local-ai-agent-from-scratch",
         title: "Building a Local AI Agent from Scratch",
         date: "Jan 15, 2026",
         tags: ["AI", "Engineering", "Agents"],
@@ -131,6 +140,7 @@ The lesson: the capability of the underlying model matters far less than the arc
     },
     {
         id: 10,
+        slug: "the-memory-problem-in-ai-systems",
         title: "The Memory Problem in AI Systems",
         date: "Feb 28, 2026",
         tags: ["AI", "Memory", "Architecture"],
@@ -291,3 +301,48 @@ export const ABOUT_ME = {
 };
 
 export const NAV_LINKS = ["Home", "Projects", "Services", "Blog", "Contact"];
+
+// Structured mirror of the credentials/achievements prose in resumeContext.js's AI
+// system prompt, kept separately so the static page generator (scripts/prerender.js)
+// has real fields to render instead of parsing a prompt string. Keep in sync by hand
+// if either changes.
+export const EDUCATION = [
+    { institution: "University of Massachusetts Lowell", credential: "B.S.B.A., Management Information Systems and Business Administration", period: "2001 – 2005" }
+];
+
+export const CERTIFICATIONS = [
+    { name: "Project Management Professional (PMP) #1276180", period: "June 2009 – June 2024" },
+    { name: "AWS Certified Cloud Practitioner", period: "February 2020 – February 2023" }
+];
+
+export const RECOGNITION = [
+    { name: "Global Services Pinnacle Award", year: "2023" },
+    { name: "Akamai Leadership Academy", year: "2020" },
+    { name: "Akamai Leadership Preparatory School", year: "2017" },
+    { name: "Akamai Certified Instructor", year: "2016 – 2018" },
+    { name: "Akamai \"Titan\" Award Recipient", year: "2015", note: "Given annually to the top-performing employees across Akamai's global Sales, Services & Marketing organization." }
+];
+
+export const KEY_ACHIEVEMENTS = [
+    "Directed a $70M+ ARR services organization that served as the primary enablement and delivery engine, securing and scaling a $300M+ financial institution portfolio.",
+    "Built a culture of high-performance by embedding an OKR framework to align a 45-person global team (NA, Costa Rica, India), consistently delivering on ambitious corporate goals.",
+    "Conducts quarterly business reviews (QBRs) to C-level stakeholders, highlighting financial performance, risks, and opportunities for a $70M portfolio.",
+    "Architected a services sales incentive plan that turned a $145k investment (over 3 years) into $25M+ in new Annual Recurring Revenue.",
+    "Established an oversight committee to capture service over-utilization, generating a 210% increase in new revenue.",
+    "Built a global Value Management Office (VMO) from ideation to operationalization, centralizing expertise and saving 2,300+ field hours in its first two years.",
+    "Established a global Blameless Post-Mortem program reaching 500+ services personnel, creating a culture of learning and driving direct product enhancements.",
+    "Leading a global leadership transformation initiative focused on coaching, development, and establishing behaviors that drive organizational impact.",
+    "Created \"Project Milkshake,\" a thought leadership program that produced new go-to-market assets and directly supported marketing collateral."
+];
+
+// TODO(raphael): the live Contact section uses raphael@raphaeljedwards.com, but the
+// Person JSON-LD in index.html and the AI persona's contact line (resumeContext.js,
+// via VITE_ADMIN_EMAILS) use raphaeledwards@gmail.com. Pick one canonical contact
+// email — this mirrors the existing site's mailto link pending that decision.
+export const CONTACT_INFO = {
+    email: "raphael@raphaeljedwards.com",
+    linkedin: "https://www.linkedin.com/in/raphaeljedwards/",
+    github: "https://github.com/raphaeledwards",
+    location: "Boston, MA",
+    availableFor: ["Speaking engagements", "Advisory board roles", "Strategic consulting"]
+};
