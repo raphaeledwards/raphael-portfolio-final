@@ -6,6 +6,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Raphael J. Edwards | Technology Executive & Services Architect</title>
 
+    <!-- Prerendered routes (scripts/prerender.js) inject static header/main/footer
+         markup into #root so crawlers and no-JS clients get real content without
+         running JS. Hide it visually until the React app mounts and replaces it,
+         so it doesn't flash before hydration. Two fallbacks restore visibility so
+         a visitor is never left looking at a permanently blank page: the
+         <noscript> rule covers JS fully disabled, and the timeout below covers
+         JS enabled but the app failing/taking too long to mount. -->
+    <style>
+      html, body { background: #0a0a0a; }
+      #root > header, #root > main, #root > footer { visibility: hidden; }
+    </style>
+    <noscript>
+      <style>#root > header, #root > main, #root > footer { visibility: visible; }</style>
+    </noscript>
+    <script>
+      setTimeout(function () {
+        document.querySelectorAll('#root > header, #root > main, #root > footer')
+          .forEach(function (el) { el.style.visibility = 'visible'; });
+      }, 2000);
+    </script>
+
     <!-- SEO & Metadata -->
     <meta name="description" content="Portfolio of Raphael J. Edwards, a Boston-based Technology Executive and Services Architect specializing in building resilient teams and solving complex problems." />
     <meta name="keywords" content="Raphael J. Edwards, Technology Executive, Services Architect, Boston, Cybersecurity, Cloud Computing, Digital Transformation, Engineering Leadership" />
