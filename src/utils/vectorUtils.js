@@ -1,3 +1,5 @@
+import { auth } from '../firebase';
+
 // Simple in-memory cache to prevent redundant API calls
 const embeddingCache = new Map();
 
@@ -18,9 +20,13 @@ export const getEmbedding = async (text) => {
     }
 
     try {
+        const idToken = await auth?.currentUser?.getIdToken();
         const response = await fetch('/api/embed', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                ...(idToken ? { Authorization: `Bearer ${idToken}` } : {})
+            },
             body: JSON.stringify({ text })
         });
         const data = await response.json();

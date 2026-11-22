@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { isRateLimited, getClientIp } from './_rateLimit.js';
+import { requireFirebaseAuth } from './_verifyAuth.js';
 
 const MAX_PROMPT_LENGTH = 60000;
 const RATE_LIMIT = { limit: 20, windowMs: 5 * 60 * 1000 };
@@ -17,6 +18,12 @@ export default async function handler(req, res) {
 
     if (isRateLimited(getClientIp(req), RATE_LIMIT)) {
         return res.status(429).json({ error: 'Too many requests. Please slow down.' });
+    }
+
+    try {
+        await requireFirebaseAuth(req);
+    } catch {
+        return res.status(401).json({ error: 'Sign in required.' });
     }
 
     const { prompt } = req.body || {};

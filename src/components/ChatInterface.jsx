@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import { systemPrompt as externalSystemPrompt } from '../data/resumeContext';
 import { getContextualData, logChatEntry, SECTION_SUGGESTIONS, DEV_SUGGESTIONS } from '../utils/chatUtils';
 import { ABOUT_ME } from '../data/portfolioData';
+import { auth } from '../firebase';
 
 const ChatInterface = ({ user, projects, expertise, blogs, sourceCodes, onClose, activeSection, onLogout }) => {
     const STORAGE_KEY = `chat_history_${user?.uid || 'guest'}`;
@@ -105,9 +106,13 @@ const ChatInterface = ({ user, projects, expertise, blogs, sourceCodes, onClose,
             // *Correction*: To keep this simple and functional without deep refactoring, we will perform a fetch here. 
             // Since 'messages' is a dependency, this callback will regenerate on every message, which is fine.
 
+            const idToken = await auth?.currentUser?.getIdToken();
             const response = await fetch('/api/chat', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(idToken ? { Authorization: `Bearer ${idToken}` } : {})
+                },
                 body: JSON.stringify({ prompt: finalSystemPrompt })
             });
 

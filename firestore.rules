@@ -16,19 +16,19 @@ service cloud.firestore {
     // ADMIN ONLY: Allow writes only for your specific UID
     // REPLACE 'YOUR_ADMIN_UID_HERE' with the UID you copied from the Admin Panel.
     match /{document=**} {
-      allow write: if request.auth.uid == 'YOUR_ADMIN_UID_HERE';
+      allow write: if request.auth.uid == 'UO7vlm5B44TRVqmFLqaJcf5pYaW2';
     }
     
     // DIAGNOSTICS: Allow the admin to write to this path for testing
     match /diagnostics/{document=**} {
-      allow write: if request.auth.uid == 'YOUR_ADMIN_UID_HERE';
-      allow read: if request.auth.uid == 'YOUR_ADMIN_UID_HERE';
+      allow write: if request.auth.uid == 'UO7vlm5B44TRVqmFLqaJcf5pYaW2';
+      allow read: if request.auth.uid == 'UO7vlm5B44TRVqmFLqaJcf5pYaW2';
     }
     
     // CHAT LOGS: Users can write their own logs, Admin can read all
     match /chat_logs/{document=**} {
       allow create: if request.auth != null;
-      allow read, delete: if request.auth.uid == 'YOUR_ADMIN_UID_HERE';
+      allow read, delete: if request.auth.uid == 'UO7vlm5B44TRVqmFLqaJcf5pYaW2';
     }
   }
 }
