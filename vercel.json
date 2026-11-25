@@ -1,4 +1,11 @@
 {
+    "redirects": [
+        {
+            "source": "/resume",
+            "destination": "/",
+            "permanent": true
+        }
+    ],
     "headers": [
         {
             "source": "/(.*)",
